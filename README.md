@@ -10,9 +10,9 @@ Arguments:
   [BASE_PATH]
 
 Options:
-  -m, --model <MODEL>
-  -a, --api-key <API_KEY>
   -p, --prompt <PROMPT>    [default: "Explain the code in the files provided"]
+  -m, --model <MODEL>　　 [default: "gemini-1.5-flash"]
+  -a, --api-key <API_KEY>
   -h, --help               Print help
   -V, --version            Print version
 ```
@@ -53,7 +53,7 @@ Here's a breakdown of its functionality:
 export GOOGLE_API_KEY="YOUR_API_KEY"
 
 cargo build --release
-./target/release/askrepo --prompt "What is the purpose of this code?" --model "gemini-1.5-flash" ../your-repo/src
+./target/release/askrepo --prompt "What is the purpose of this code?" ../your-repo/src
 ```
 
 ## Run Tests
