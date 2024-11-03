@@ -49,6 +49,10 @@ Here's a breakdown of its functionality:
 
 ## Installation
 
+Gemini API key is required to run this program. You can get it from
+
+https://aistudio.google.com/app/apikey
+
 ```bash
 export GOOGLE_API_KEY="YOUR_API_KEY"
 
