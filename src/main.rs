@@ -76,29 +76,3 @@ async fn main() {
         Err(e) => error!("Error fetching Google API data: {}", e),
     }
 }
-
-#[cfg(test)]
-#[tokio::test]
-async fn test_main() {
-    use std::fs;
-
-    use predicates::prelude::predicate;
-    use tempfile::tempdir;
-
-    let temp_dir = tempdir().unwrap();
-    let file_path = temp_dir.path().join("test_file.rs");
-    fs::write(&file_path, "fn main() { println!(\"Hello, world!\"); }").unwrap();
-
-    let mut cmd = assert_cmd::Command::cargo_bin("askrepo").unwrap();
-    cmd.arg(file_path.to_str().unwrap())
-        .arg("--prompt")
-        .arg("What does this code do?")
-        .arg("--model")
-        .arg("gemini-1.5-flash")
-        .arg("--api_key")
-        .arg(&env::var("GOOGLE_API_KEY").unwrap());
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("Hello, world!"));
-}

@@ -47,6 +47,21 @@ Here's a breakdown of its functionality:
 **In essence, this code acts as a question-answering tool for source code by using a Google AI model to analyze and provide answers based on the provided source code files.**
 ```
 
+## Installation
+
+```bash
+export GOOGLE_API_KEY="YOUR_API_KEY"
+
+cargo build --release
+./target/release/askrepo --prompt "What is the purpose of this code?" --model "gemini-1.5-flash" ../your-repo/src
+```
+
+## Run Tests
+
+```bash
+cargo test
+```
+
 ## Implementation Details
 
 ### Retrieving Git-managed files:
@@ -55,7 +70,8 @@ Gets a list of Git-managed files in the specified directory.
 
 ### Text file determination:
 
-Determines whether a file is a text file. If the file contains bytes greater than or equal to 128, it is considered a binary file.
+1. The file contains null bytes or matches known binary file magic numbers.
+2. Determines whether a file is a text file. If the file contains null bytes or matches known binary file magic numbers, it is considered a binary file.
 
 ### Getting file contents:
 
