@@ -54,10 +54,16 @@ Gemini API key is required to run this program. You can get it from
 https://aistudio.google.com/app/apikey
 
 ```bash
-export GOOGLE_API_KEY="YOUR_API_KEY"
+cargo install askrepo
 
-cargo build --release
-./target/release/askrepo --prompt "What is the purpose of this code?" ../your-repo/src
+export GOOGLE_API_KEY="YOUR_API_KEY"
+askrepo --prompt "What is the purpose of this code?" ../your-repo/src
+```
+
+## Development
+
+```bash
+cargo run -- --prompt "Find bugs in this code" ./src
 ```
 
 ## Run Tests
