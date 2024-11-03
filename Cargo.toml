@@ -2,6 +2,10 @@
 name = "askrepo"
 version = "0.1.0"
 edition = "2021"
+publish = true
+description = "Source code reading with LLM"
+license = "MIT"
+authors = ["laiso <laiso@lai.so>"]
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
