@@ -14,19 +14,35 @@ const MAGIC_NUMBERS: &[&[u8]] = &[
     b"GIF89a",            // GIF
 ];
 
-pub fn is_binary_file(file: &str) -> bool {
-    let binary_extensions = ["jpg", "jpeg", "png", "gif", "bmp", "exe", "dll"];
-    if let Some(extension) = file.split('.').last() {
-        if binary_extensions.contains(&extension.to_lowercase().as_str()) {
-            return true;
-        }
-    }
+fn is_binary_file_by_extension(file: &str) -> bool {
+    let binary_extensions = [
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "bmp",
+        "exe",
+        "dll",
+    ];
+    file.split('.')
+        .last()
+        .map(|extension| binary_extensions.contains(&extension.to_lowercase().as_str()))
+        .unwrap_or(false)
+}
 
-    let data = fs::read(file).expect("Unable to read file");
+fn is_binary_file_by_content(file: &str) -> bool {
+    let data = match fs::read(file) {
+        Ok(data) => data,
+        Err(_) => return false,
+    };
     let scan_size = min(data.len(), MAX_SCAN_SIZE);
     let has_zero_bytes = memchr(0x00, &data[..scan_size]).is_some();
 
     has_zero_bytes || MAGIC_NUMBERS.iter().any(|magic| data.starts_with(magic))
+}
+
+pub fn is_binary_file(file: &str) -> bool {
+    is_binary_file_by_extension(file) || is_binary_file_by_content(file)
 }
 
 pub fn get_git_tracked_files(base_path: &str) -> Vec<String> {
