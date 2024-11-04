@@ -32,9 +32,22 @@ async fn main() {
 
     let args = Args::parse();
 
-    let path = args
-        .base_path
-        .unwrap_or_else(|| current_dir().unwrap().to_str().unwrap().to_string());
+    let path = match args.base_path {
+        Some(p) => p,
+        None => match current_dir() {
+            Ok(dir) => match dir.to_str() {
+                Some(s) => s.to_string(),
+                None => {
+                    error!("Failed to convert current directory to string");
+                    exit(1);
+                }
+            },
+            Err(_) => {
+                error!("Failed to get current directory");
+                exit(1);
+            }
+        },
+    };
     let instruction = args.prompt;
     let model = args.model.unwrap_or("gemini-1.5-flash".to_string());
     let api_key = args.api_key.unwrap_or_else(|| {
