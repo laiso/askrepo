@@ -1,6 +1,6 @@
 # askrepo - Source code reading with LLM
 
-This program reads the content of Git-managed text files in a specified directory, sends it to the Google Gemini API, and provides answers to questions based on the specified prompt.
+This program reads the content of Git-managed text files in a specified directory, sends it to the Google Gemini API, and provides answers to questions based on the specified prompt. It supports streaming responses for real-time feedback.
 
 ```bash
 ❯ askrepo --help
@@ -10,11 +10,30 @@ Arguments:
   [BASE_PATH]
 
 Options:
-  -p, --prompt <PROMPT>    [default: "Explain the code in the files provided"]
-  -m, --model <MODEL>　　 [default: "gemini-1.5-flash"]
+  -p, --prompt <PROMPT>      [default: "Explain the code in the files provided"]
+  -m, --model <MODEL>        [default: "gemini-1.5-flash"]
   -a, --api-key <API_KEY>
-  -h, --help               Print help
-  -V, --version            Print version
+  -u, --base-url <BASE_URL>  [default: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"]
+      --stream               Enable/disable streaming mode [default: true]
+  -h, --help                 Print help
+  -V, --version             Print version
+```
+
+## Examples
+
+### Using Google Gemini API (default)
+```bash
+export GOOGLE_API_KEY="YOUR_API_KEY"
+askrepo --prompt "What is the purpose of this code?" ../your-repo/src
+```
+
+### Using OpenAI API
+```bash
+export GOOGLE_API_KEY="YOUR_OPENAI_API_KEY"
+askrepo --prompt "What is the purpose of this code?" \
+  --model "o3-mini" \
+  --base-url "https://api.openai.com/v1/chat/completions" \
+  ../your-repo/src
 ```
 
 ```bash
@@ -30,8 +49,8 @@ Here's a breakdown of its functionality:
     - `get_files_content`: Reads content of text files (non-binary), escapes special characters, and formats it for use in the query (lines 42-58).
 
 2. **`src/google_api.rs`:** This module handles interaction with the Google AI API.
-    - `get_google_api_data`: Sends a request to the API with the provided query, model name, and API key (lines 4-25).
-    - `parse_google_api_response`: Parses the JSON response from the API, extracting the generated text (lines 27-36).
+    - `get_google_api_data`: Sends a request to the API with streaming support, handling both streaming and non-streaming modes.
+    - `parse_google_api_response`: Parses the JSON response from the API, supporting both streaming chunks and complete responses.
 
 3. **`src/main.rs`:** This module orchestrates the entire process.
     - It parses command-line arguments:
@@ -39,12 +58,14 @@ Here's a breakdown of its functionality:
         - `model`: The Google AI model to use (defaults to "gemini-1.5-flash").
         - `api_key`: The Google API key for authentication.
         - `prompt`: The question to ask about the source code (defaults to "Explain the code in the files provided").
+        - `base_url`: The API endpoint URL.
+        - `stream`: Enable/disable streaming mode (defaults to true).
     - It calls `file_utils::get_files_content` to get the formatted content of text files within the `base_path`.
     - It constructs the prompt by combining the file information, the question, and the extracted source code content.
     - It calls `google_api::get_google_api_data` to send the prompt to the Google AI model.
-    - Finally, it parses the response and prints the generated text.
+    - Finally, it streams or returns the complete response based on the streaming mode.
 
-**In essence, this code acts as a question-answering tool for source code by using a Google AI model to analyze and provide answers based on the provided source code files.**
+**In essence, this code acts as a question-answering tool for source code by using a Google AI model to analyze and provide answers based on the provided source code files. With streaming support, it can now provide real-time responses as they are generated.**
 ```
 
 ## Installation
@@ -89,8 +110,16 @@ Reads the contents of Git-managed text files and combines them in CSV format.
 
 ### Comment generation:
 
-Uses Google's generative AI model to generate comments based on the specified prompt. The generated comments are returned as an asynchronous generator.
+Uses Google's generative AI model to generate comments based on the specified prompt. The generated comments can be streamed in real-time or returned as a complete response. The streaming mode provides immediate feedback as the AI generates the response.
 
 ### Command Line Interface:
 
-When the script is executed directly, it retrieves the prompt and path from command line arguments, generates comments, and outputs them to the console.
+When the script is executed directly, it retrieves the prompt and path from command line arguments, generates comments, and outputs them to the console. By default, it uses streaming mode to provide real-time responses.
+
+## Features
+
+- Streaming support for real-time AI responses
+- Flexible API endpoint configuration
+- Improved response parsing for different formats
+- Support for both streaming and non-streaming modes
+- Default to the latest Gemini model (gemini-1.5-flash)
