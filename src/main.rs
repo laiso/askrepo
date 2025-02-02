@@ -2,13 +2,15 @@ mod file_utils;
 mod google_api;
 
 use clap::Parser;
-use google_api::parse_google_api_response;
 use log::{error, info};
 use std::env;
 use std::env::current_dir;
 use std::path::Path;
 use std::process::exit;
 use tokio::process::Command;
+use serde_json;
+use futures_util::StreamExt;
+use std::io::Write;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -16,7 +18,7 @@ struct Args {
     #[arg(index = 1)]
     base_path: Option<String>,
 
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "gemini-1.5-flash")]
     model: Option<String>,
 
     #[arg(short, long)]
@@ -24,6 +26,12 @@ struct Args {
 
     #[arg(short, long, default_value = "Explain the code in the files provided")]
     prompt: String,
+
+    #[arg(short = 'u', long, default_value = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")]
+    base_url: String,
+
+    #[arg(long, default_value = "true")]
+    stream: bool,
 }
 
 #[tokio::main]
@@ -49,13 +57,14 @@ async fn main() {
         },
     };
     let instruction = args.prompt;
-    let model = args.model.unwrap_or("gemini-1.5-flash".to_string());
+    let model = args.model.unwrap();
     let api_key = args.api_key.unwrap_or_else(|| {
         env::var("GOOGLE_API_KEY").unwrap_or_else(|_| {
             error!("GOOGLE_API_KEY environment variable not set");
             exit(1);
         })
     });
+    let base_url = args.base_url;
 
     if Command::new("git").arg("--version").output().await.is_err() {
         error!("Git is not installed or not found in the execution path.");
@@ -75,17 +84,23 @@ async fn main() {
         }
     };
 
-    let prompt = format!("The following is information read from a list of source codes.\n\nFiles:\n{}\n\nQuestion:\n{}\n\nPlease answer the question by referencing the specific filenames and source code from the files provided above.", files_content, instruction);
-    match google_api::get_google_api_data(&api_key, &prompt, &model).await {
-        Ok(data) => {
-            if let Some(text) = parse_google_api_response(&data) {
+    let prompt = format!(
+        "The following is information read from a list of source codes.\n\nFiles:\n{}\n\nQuestion:\n{}\n\nPlease answer the question by referencing the specific filenames and source code from the files provided above.",
+        files_content, instruction
+    );
+
+    let messages = vec![serde_json::json!({
+        "role": "user",
+        "content": prompt
+    })];
+    match google_api::get_google_api_data(&api_key, messages, &model, args.stream, &base_url).await {
+        Ok(mut stream) => {
+            while let Some(text) = stream.next().await {
                 info!("Extracted text:\n{}", text);
-                println!("{}", text);
-            } else {
-                error!("Failed to extract text from Google API response");
-                println!("Response body: {:?}", data);
+                print!("{}", text);
+                std::io::stdout().flush().unwrap();
             }
         }
-        Err(e) => error!("Error fetching Google API data: {}", e),
+        Err(e) => error!("Error fetching API data: {}", e),
     }
 }
