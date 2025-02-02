@@ -1,6 +1,6 @@
 [package]
 name = "askrepo"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 publish = true
 description = "Source code reading with LLM"
@@ -12,10 +12,12 @@ clap = { version = "4.0", features = ["derive"] }
 bytecount = "0.6.7"
 env_logger = { version = "0.11" }
 futures = { version = "0.3" }
+futures-util = { version = "0.3" }
 log = { version = "0.4.20" }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "stream"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
 tokio = { version = "1.35", features = ["full"] }
 memchr = { version = "2", default-features = false }
 ignore = "0.4"
+tokio-stream = "0.1"
