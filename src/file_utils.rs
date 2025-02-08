@@ -37,7 +37,7 @@ pub fn is_binary_file(file: &str) -> bool {
 
 pub fn get_tracked_files(base_path: &str) -> io::Result<Vec<String>> {
     let walker = WalkBuilder::new(base_path)
-        .hidden(false)
+        .hidden(true)
         .git_ignore(true)
         .git_global(true)
         .build();
