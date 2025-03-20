@@ -30,6 +30,17 @@ pub async fn get_google_api_data(
 
     if stream {
         let response = request.send().await?;
+        if !response.status().is_success() {
+            let error_text = response.text().await?;
+            if let Ok(error_json) = serde_json::from_str::<Value>(&error_text) {
+                if let Some(error) = error_json.get("error") {
+                    if let Some(message) = error.get("message").and_then(|m| m.as_str()) {
+                        return Err(format!("API Error: {}", message).into());
+                    }
+                }
+            }
+            return Err(format!("API Error: {}", error_text).into());
+        }
         let byte_stream = response.bytes_stream();
         let (tx, rx) = mpsc::channel(100);
 
@@ -57,8 +68,19 @@ pub async fn get_google_api_data(
 
         Ok(tokio_stream::wrappers::ReceiverStream::new(rx))
     } else {
-        let res = request.send().await?;
-        let text = res.text().await?;
+        let response = request.send().await?;
+        if !response.status().is_success() {
+            let error_text = response.text().await?;
+            if let Ok(error_json) = serde_json::from_str::<Value>(&error_text) {
+                if let Some(error) = error_json.get("error") {
+                    if let Some(message) = error.get("message").and_then(|m| m.as_str()) {
+                        return Err(format!("API Error: {}", message).into());
+                    }
+                }
+            }
+            return Err(format!("API Error: {}", error_text).into());
+        }
+        let text = response.text().await?;
         let (tx, rx) = mpsc::channel(1);
         let _ = tx.send(text).await;
         Ok(tokio_stream::wrappers::ReceiverStream::new(rx))

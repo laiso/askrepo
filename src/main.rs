@@ -80,7 +80,8 @@ async fn main() {
         Ok(content) => content,
         Err(e) => {
             error!("Failed to get files content: {}", e);
-            return;
+            error!("Please check if the directory is not too large (max 10MB total) and files are accessible.");
+            exit(1);
         }
     };
 
@@ -101,6 +102,12 @@ async fn main() {
                 std::io::stdout().flush().unwrap();
             }
         }
-        Err(e) => error!("Error fetching API data: {}", e),
+        Err(e) => {
+            error!("Error: {}", e);
+            if e.to_string().contains("API Error") {
+                error!("The request was too large or contained invalid content. Please try with a smaller codebase or fewer files.");
+            }
+            exit(1);
+        }
     }
 }
