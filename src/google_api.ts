@@ -22,7 +22,7 @@ export async function* getGoogleApiData(
   messages: GoogleApiMessage[],
   model: string,
   stream: boolean,
-  baseUrl: string
+  baseUrl: string,
 ): AsyncGenerator<string, void, unknown> {
   const body = {
     model,
@@ -40,14 +40,18 @@ export async function* getGoogleApiData(
   });
 
   if (!response.ok) {
-    let errorDetails = '';
+    let errorDetails = "";
     try {
       const errorResponse = await response.json();
       errorDetails = JSON.stringify(errorResponse);
     } catch {
       errorDetails = await response.text();
     }
-    throw new Error(`Google API error: ${response.status} ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ''}`);
+    throw new Error(
+      `Google API error: ${response.status} ${response.statusText}${
+        errorDetails ? ` - ${errorDetails}` : ""
+      }`,
+    );
   }
 
   if (stream) {

@@ -12,7 +12,9 @@ const MAGIC_NUMBERS: Uint8Array[] = [
   new TextEncoder().encode("GIF89a"), // GIF
 ];
 
-const MAX_MAGIC_NUMBER_LENGTH = Math.max(...MAGIC_NUMBERS.map(arr => arr.length));
+const MAX_MAGIC_NUMBER_LENGTH = Math.max(
+  ...MAGIC_NUMBERS.map((arr) => arr.length),
+);
 
 export function isBinaryFileByExtension(file: string): boolean {
   const binaryExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "exe", "dll"];
@@ -29,18 +31,18 @@ export async function isBinaryFileByContent(file: string): Promise<boolean> {
       const bytesToRead = Math.max(MAX_SCAN_SIZE, MAX_MAGIC_NUMBER_LENGTH);
       const buffer = new Uint8Array(bytesToRead);
       const bytesRead = await file_obj.read(buffer);
-      
+
       if (bytesRead === null) return false;
-      
+
       const data = buffer.subarray(0, bytesRead);
-      
+
       for (let i = 0; i < data.length && i < MAX_SCAN_SIZE; i++) {
         if (data[i] === 0) return true;
       }
-      
+
       for (const magic of MAGIC_NUMBERS) {
         if (data.length < magic.length) continue;
-        
+
         let match = true;
         for (let j = 0; j < magic.length; j++) {
           if (data[j] !== magic[j]) {
@@ -64,18 +66,28 @@ export async function isBinaryFile(file: string): Promise<boolean> {
   return isBinaryFileByExtension(file) || (await isBinaryFileByContent(file));
 }
 
-export async function getTrackedFiles(basePath: string, verbose = false): Promise<string[]> {
+export async function getTrackedFiles(
+  basePath: string,
+  verbose = false,
+): Promise<string[]> {
   if (verbose) {
     console.log(`${basePath} is the base path`);
   }
-  
+
   const files: string[] = [];
-  const gitignoreCache = new Map<string, { denies: (path: string) => boolean }>();
-  
+  const gitignoreCache = new Map<
+    string,
+    { denies: (path: string) => boolean }
+  >();
+
   async function loadGitignoreFile(
-    gitignorePath: string, 
-    dirRules: Array<{ path: string, matcher: { denies: (path: string) => boolean } }>
-  ): Promise<Array<{ path: string, matcher: { denies: (path: string) => boolean } }>> {
+    gitignorePath: string,
+    dirRules: Array<
+      { path: string; matcher: { denies: (path: string) => boolean } }
+    >,
+  ): Promise<
+    Array<{ path: string; matcher: { denies: (path: string) => boolean } }>
+  > {
     if (!gitignoreCache.has(gitignorePath)) {
       try {
         const gitignoreContent = await Deno.readTextFile(gitignorePath);
@@ -92,18 +104,23 @@ export async function getTrackedFiles(basePath: string, verbose = false): Promis
         gitignoreCache.set(gitignorePath, { denies: NO_OP_DENIES });
       }
     } else if (gitignoreCache.get(gitignorePath)!.denies !== NO_OP_DENIES) {
-      dirRules.push({ path: gitignorePath, matcher: gitignoreCache.get(gitignorePath)! });
+      dirRules.push({
+        path: gitignorePath,
+        matcher: gitignoreCache.get(gitignorePath)!,
+      });
     }
     return dirRules;
   }
-  
+
   async function traverseDirectory(
-    dirPath: string, 
-    currentRules: Array<{ path: string, matcher: { denies: (path: string) => boolean } }> = []
+    dirPath: string,
+    currentRules: Array<
+      { path: string; matcher: { denies: (path: string) => boolean } }
+    > = [],
   ): Promise<void> {
     const gitignorePath = join(dirPath, ".gitignore");
     let dirRules = [...currentRules];
-    
+
     try {
       const gitDirPath = join(dirPath, ".git");
       const gitDirStat = await Deno.stat(gitDirPath);
@@ -116,13 +133,13 @@ export async function getTrackedFiles(basePath: string, verbose = false): Promis
     } catch (_e) {
       dirRules = await loadGitignoreFile(gitignorePath, dirRules);
     }
-    
+
     try {
       for await (const entry of Deno.readDir(dirPath)) {
         const entryPath = join(dirPath, entry.name);
-        
+
         if (entry.name.startsWith(".")) continue;
-              
+
         if (entry.isDirectory) {
           await traverseDirectory(entryPath, dirRules);
         } else {
@@ -136,7 +153,7 @@ export async function getTrackedFiles(basePath: string, verbose = false): Promis
               break;
             }
           }
-          
+
           if (!isIgnored) {
             if (verbose) {
               console.log(`${entryPath} is not ignored`);
@@ -149,19 +166,22 @@ export async function getTrackedFiles(basePath: string, verbose = false): Promis
       console.error(`Error reading directory ${dirPath}:`, e);
     }
   }
-  
+
   await traverseDirectory(basePath);
   return files;
 }
 
-export async function getFilesContent(basePaths: string | string[], verbose = false): Promise<string> {
+export async function getFilesContent(
+  basePaths: string | string[],
+  verbose = false,
+): Promise<string> {
   const paths = Array.isArray(basePaths) ? basePaths : [basePaths];
   const allFiles: string[] = [];
-  
+
   for (const path of paths) {
     try {
       const fileInfo = await Deno.stat(path);
-      
+
       if (fileInfo.isFile) {
         if (verbose) {
           console.log(`Adding single file: ${path}`);
@@ -169,7 +189,7 @@ export async function getFilesContent(basePaths: string | string[], verbose = fa
         allFiles.push(path);
         continue;
       }
-      
+
       if (fileInfo.isDirectory) {
         if (verbose) {
           console.log(`Processing directory: ${path}`);
@@ -182,7 +202,7 @@ export async function getFilesContent(basePaths: string | string[], verbose = fa
       if (verbose) {
         console.log(`Trying as glob pattern: ${path}`);
       }
-      
+
       try {
         for await (const entry of expandGlob(path)) {
           if (entry.isFile) {
@@ -197,15 +217,15 @@ export async function getFilesContent(basePaths: string | string[], verbose = fa
       }
     }
   }
-  
+
   if (verbose) {
     console.log(`Found ${allFiles.length} total files to process.`);
   }
-  
+
   if (allFiles.length === 0) {
     throw new Error("No files found in the specified paths");
   }
-  
+
   const results: string[] = [];
   for (const file of allFiles) {
     const isBin = await isBinaryFile(file);
@@ -226,14 +246,14 @@ export async function getFilesContent(basePaths: string | string[], verbose = fa
       console.error(`Error reading file ${file}:`, err);
     }
   }
-  
+
   if (results.length === 0) {
     throw new Error("No readable files found");
   }
-  
+
   if (verbose) {
     console.log(`Total readable files: ${results.length}`);
   }
-  
+
   return results.join("\n");
 }
