@@ -5,7 +5,7 @@ import * as googleApi from "./src/google_api.ts";
 import { parseAndValidateArgs } from "./src/cli/parseAndValidateArgs.ts";
 
 export interface Args {
-  basePath: string;
+  basePaths: string[];
   apiKey: string;
   prompt: string;
   model: string;
@@ -34,20 +34,22 @@ Please answer the question by referencing the specific filenames and source code
 
 async function main() {
   // Parse and validate command-line arguments
-  const { basePath, apiKey, prompt, model, baseUrl, stream, verbose } = parseAndValidateArgs();
+  const { basePaths, apiKey, prompt, model, baseUrl, stream, verbose } = parseAndValidateArgs();
 
-  // Validate that the basePath exists
-  try {
-    await Deno.stat(basePath);
-  } catch (_e) {
-    console.error(`Invalid base_path: ${basePath}`);
-    Deno.exit(1);
+  for (const path of basePaths) {
+    try {
+      await Deno.stat(path);
+    } catch (_e) {
+      if (verbose) {
+        console.log(`Path not found directly: ${path}, will try as glob pattern`);
+      }
+    }
   }
 
   // Retrieve file contents with verbose logging if enabled
   let filesContent: string;
   try {
-    filesContent = await fileUtils.getFilesContent(basePath, verbose);
+    filesContent = await fileUtils.getFilesContent(basePaths, verbose);
   } catch (e) {
     console.error(`Failed to get files content: ${e}`);
     return;

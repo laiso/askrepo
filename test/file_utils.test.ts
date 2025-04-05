@@ -79,3 +79,64 @@ Deno.test("test_get_files_content", async () => {
   
   await Deno.remove(testDir, { recursive: true });
 });
+
+Deno.test("test_get_single_file_content", async () => {
+  const testDir = "./test_single_file_dir";
+  try {
+    await Deno.remove(testDir, { recursive: true });
+  } catch (_e) {
+    // Ignore if directory does not exist
+  }
+  await Deno.mkdir(testDir, { recursive: true });
+
+  const testFilePath = `${testDir}/single_test.txt`;
+  const testContent = "Single file test";
+  await Deno.writeTextFile(testFilePath, testContent);
+  
+  const content = await getFilesContent(testFilePath, true);
+  
+  assertEquals(
+    content.includes(testFilePath), 
+    true, 
+    "Filepath not included in content"
+  );
+  
+  const escapedContent = JSON.stringify(testContent).slice(1, -1);
+  assertEquals(
+    content.includes(escapedContent), 
+    true, 
+    "Test content not found"
+  );
+  
+  await Deno.remove(testDir, { recursive: true });
+});
+
+Deno.test("test_get_multiple_paths_content", async () => {
+  const testDir1 = "./test_multi_dir1";
+  const testDir2 = "./test_multi_dir2";
+  
+  for (const dir of [testDir1, testDir2]) {
+    try {
+      await Deno.remove(dir, { recursive: true });
+    } catch (_e) {
+      // Ignore if directory does not exist
+    }
+    await Deno.mkdir(dir, { recursive: true });
+  }
+  
+  const file1 = `${testDir1}/file1.txt`;
+  const file2 = `${testDir2}/file2.txt`;
+  await Deno.writeTextFile(file1, "Content 1");
+  await Deno.writeTextFile(file2, "Content 2");
+  
+  const content = await getFilesContent([file1, file2], true);
+  
+  assertEquals(content.includes(file1), true, "First file path not included in content");
+  assertEquals(content.includes(file2), true, "Second file path not included in content");
+  assertEquals(content.includes("Content 1"), true, "First file content not found");
+  assertEquals(content.includes("Content 2"), true, "Second file content not found");
+  
+  for (const dir of [testDir1, testDir2]) {
+    await Deno.remove(dir, { recursive: true });
+  }
+});
