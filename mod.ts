@@ -34,14 +34,17 @@ Please answer the question by referencing the specific filenames and source code
 
 async function main() {
   // Parse and validate command-line arguments
-  const { basePaths, apiKey, prompt, model, baseUrl, stream, verbose } = parseAndValidateArgs();
+  const { basePaths, apiKey, prompt, model, baseUrl, stream, verbose } =
+    parseAndValidateArgs();
 
   for (const path of basePaths) {
     try {
       await Deno.stat(path);
     } catch (_e) {
       if (verbose) {
-        console.log(`Path not found directly: ${path}, will try as glob pattern`);
+        console.log(
+          `Path not found directly: ${path}, will try as glob pattern`,
+        );
       }
     }
   }
@@ -63,7 +66,15 @@ async function main() {
 
   // Call Google API and stream output
   try {
-    for await (const text of googleApi.getGoogleApiData(apiKey, messages, model, stream, baseUrl)) {
+    for await (
+      const text of googleApi.getGoogleApiData(
+        apiKey,
+        messages,
+        model,
+        stream,
+        baseUrl,
+      )
+    ) {
       await Deno.stdout.write(new TextEncoder().encode(text));
     }
   } catch (e) {
