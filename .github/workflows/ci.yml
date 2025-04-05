@@ -21,8 +21,8 @@ jobs:
       - name: Remove lockfile
         run: rm -f deno.lock
       
-      - name: Format code
-        run: deno fmt
+      - name: Check code format
+        run: deno fmt --check
       
       - name: Run linter
         run: deno lint
