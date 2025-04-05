@@ -1,6 +1,9 @@
 # askrepo - Source code reading with LLM
 
-This program reads the content of Git-managed text files in a specified directory, sends it to the Google Gemini API, and provides answers to questions based on the specified prompt. It supports streaming responses for real-time feedback.
+This program reads the content of Git-managed text files in a specified
+directory, sends it to the Google Gemini API, and provides answers to questions
+based on the specified prompt. It supports streaming responses for real-time
+feedback.
 
 ## Usage
 
@@ -56,6 +59,7 @@ https://aistudio.google.com/app/apikey
 ## Examples
 
 ### Using Google Gemini API (default)
+
 ```bash
 export GOOGLE_API_KEY="YOUR_API_KEY"
 askrepo --prompt "What is the purpose of this code?" ../your-repo/src
@@ -65,6 +69,7 @@ askrepo -p "What is the purpose of this code?" -m "gemini-2.0-flash" ../your-rep
 ```
 
 ### Using OpenAI API
+
 ```bash
 export OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
 askrepo --prompt "What is the purpose of this code?" \
@@ -99,7 +104,8 @@ deno test
 
 The tool uses the `.gitignore` parser to determine which files to include:
 
-- Scans directories recursively while respecting `.gitignore` rules at each level
+- Scans directories recursively while respecting `.gitignore` rules at each
+  level
 - Skips binary files, hidden files, and `node_modules` directories
 - Caches `.gitignore` rules to optimize performance
 
@@ -107,10 +113,12 @@ The tool uses the `.gitignore` parser to determine which files to include:
 
 Files are identified as binary through two complementary methods:
 
-1. **Extension-based detection**: Checks if the file extension matches known binary formats (jpg, png, etc.)
-2. **Content-based detection**: 
+1. **Extension-based detection**: Checks if the file extension matches known
+   binary formats (jpg, png, etc.)
+2. **Content-based detection**:
    - Looks for null bytes in the first 1024 bytes
-   - Identifies binary file signatures (magic numbers) for common formats like JPEG, PNG, and GIF
+   - Identifies binary file signatures (magic numbers) for common formats like
+     JPEG, PNG, and GIF
 
 ### File Content Processing
 
@@ -124,8 +132,9 @@ Files are identified as binary through two complementary methods:
   - File paths and their contents
   - The user's question
   - Instructions for the model to reference specific files in its response
-- Supports both Google's Generative AI models (Gemini) and OpenAI-compatible APIs
-  
+- Supports both Google's Generative AI models (Gemini) and OpenAI-compatible
+  APIs
+
 ### Streaming Response Handling
 
 - Uses Deno's native fetch API with streaming support
@@ -147,5 +156,6 @@ Files are identified as binary through two complementary methods:
 - Flexible API endpoint configuration
 - Improved response parsing for different formats
 - Support for both streaming and non-streaming modes
-- Default to the latest Gemini model (gemini-2.0-flash), but can be configured to use other models
+- Default to the latest Gemini model (gemini-2.0-flash), but can be configured
+  to use other models
 - Support for OpenAI Compatible API

@@ -1,31 +1,31 @@
-name: CI  
-  
-on:  
-  push:  
-    branches: [ main ]  
-  pull_request:  
-    branches: [ main ]  
-  
-jobs:  
-  test:  
-    runs-on: ubuntu-latest  
-  
-    steps:  
-    - uses: actions/checkout@v3  
-      
-    - name: Setup Deno  
-      uses: denoland/setup-deno@0.1.0  
-      with:  
-        deno-version: v1.41.0  
-  
-    - name: Remove lockfile
-      run: rm -f deno.lock
-      
-    - name: Verify formatting  
-      run: deno fmt --check  
-  
-    - name: Run linter  
-      run: deno lint  
-  
-    - name: Run tests  
-      run: deno test
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: "v2.0.0"
+
+      - name: Remove lockfile
+        run: rm -f deno.lock
+
+      - name: Format code
+        run: deno fmt
+
+      - name: Run linter
+        run: deno lint
+
+      - name: Run tests
+        run: deno test -A

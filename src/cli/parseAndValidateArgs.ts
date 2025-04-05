@@ -8,7 +8,18 @@ import { defaults } from "../config/defaults.ts";
  */
 export function parseAndValidateArgs(): Args {
   const args = parseArgs(Deno.args, {
-    string: ["base_path", "model", "api_key", "prompt", "base_url", "b", "m", "a", "p", "u"],
+    string: [
+      "base_path",
+      "model",
+      "api_key",
+      "prompt",
+      "base_url",
+      "b",
+      "m",
+      "a",
+      "p",
+      "u",
+    ],
     boolean: ["stream", "verbose", "s", "v"],
     alias: {
       b: "base_path",
@@ -30,9 +41,11 @@ export function parseAndValidateArgs(): Args {
 
   let basePaths: string[] = [];
   if (args.base_path) {
-    basePaths = Array.isArray(args.base_path) ? args.base_path : [args.base_path];
+    basePaths = Array.isArray(args.base_path)
+      ? args.base_path
+      : [args.base_path];
   } else if (args._.length > 0) {
-    basePaths = args._.map(arg => String(arg)); // Convert all positional arguments to strings
+    basePaths = args._.map((arg) => String(arg)); // Convert all positional arguments to strings
   } else {
     basePaths = [Deno.cwd()]; // Default to current directory if no paths provided
   }
