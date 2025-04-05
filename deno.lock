@@ -7,8 +7,10 @@
     "jsr:@std/assert@*": "1.0.12",
     "jsr:@std/assert@1": "1.0.12",
     "jsr:@std/cli@^1.0.15": "1.0.15",
+    "jsr:@std/fs@1": "1.0.15",
     "jsr:@std/internal@^1.0.6": "1.0.6",
-    "jsr:@std/path@1": "1.0.8"
+    "jsr:@std/path@1": "1.0.8",
+    "jsr:@std/path@^1.0.8": "1.0.8"
   },
   "jsr": {
     "@cfa/gitignore-parser@0.1.4": {
@@ -22,6 +24,12 @@
     },
     "@std/cli@1.0.15": {
       "integrity": "e79ba3272ec710ca44d8342a7688e6288b0b88802703f3264184b52893d5e93f"
+    },
+    "@std/fs@1.0.15": {
+      "integrity": "c083fb479889d6440d768e498195c3fc499d426fbf9a6592f98f53884d1d3f41",
+      "dependencies": [
+        "jsr:@std/path@^1.0.8"
+      ]
     },
     "@std/internal@1.0.6": {
       "integrity": "9533b128f230f73bd209408bb07a4b12f8d4255ab2a4d22a1fd6d87304aca9a4"
