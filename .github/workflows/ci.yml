@@ -18,8 +18,8 @@ jobs:
       with:  
         deno-version: v1.41.0  
   
-    - name: Cache dependencies
-      run: deno cache --reload mod.ts
+    - name: Remove lockfile
+      run: rm -f deno.lock
       
     - name: Verify formatting  
       run: deno fmt --check  
