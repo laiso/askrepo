@@ -28,7 +28,15 @@ export function parseAndValidateArgs(): Args {
     },
   });
 
-  const basePath: string = args.base_path || (args._[0] as string) || Deno.cwd();
+  let basePaths: string[] = [];
+  if (args.base_path) {
+    basePaths = Array.isArray(args.base_path) ? args.base_path : [args.base_path];
+  } else if (args._.length > 0) {
+    basePaths = args._.map(arg => String(arg)); // Convert all positional arguments to strings
+  } else {
+    basePaths = [Deno.cwd()]; // Default to current directory if no paths provided
+  }
+
   const prompt: string = args.prompt || "";
 
   let apiKey: string = args.api_key || "";
@@ -41,7 +49,7 @@ export function parseAndValidateArgs(): Args {
   }
 
   return {
-    basePath,
+    basePaths,
     apiKey,
     prompt,
     model: args.model || defaults.model,
