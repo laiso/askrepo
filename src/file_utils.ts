@@ -1,5 +1,6 @@
 import { join } from "jsr:@std/path@1";
 import { compile } from "jsr:@cfa/gitignore-parser@0.1.4";
+import { expandGlob } from "jsr:@std/fs@1";
 
 const MAX_SCAN_SIZE = 1024;
 const NO_OP_DENIES = (_path: string) => false;
@@ -153,13 +154,60 @@ export async function getTrackedFiles(basePath: string, verbose = false): Promis
   return files;
 }
 
-export async function getFilesContent(basePath: string, verbose = false): Promise<string> {
-  const files = await getTrackedFiles(basePath, verbose);
-  if (verbose) {
-    console.log(`Found ${files.length} tracked files.`);
+export async function getFilesContent(basePaths: string | string[], verbose = false): Promise<string> {
+  const paths = Array.isArray(basePaths) ? basePaths : [basePaths];
+  const allFiles: string[] = [];
+  
+  for (const path of paths) {
+    try {
+      const fileInfo = await Deno.stat(path);
+      
+      if (fileInfo.isFile) {
+        if (verbose) {
+          console.log(`Adding single file: ${path}`);
+        }
+        allFiles.push(path);
+        continue;
+      }
+      
+      if (fileInfo.isDirectory) {
+        if (verbose) {
+          console.log(`Processing directory: ${path}`);
+        }
+        const dirFiles = await getTrackedFiles(path, verbose);
+        allFiles.push(...dirFiles);
+        continue;
+      }
+    } catch (_e) {
+      if (verbose) {
+        console.log(`Trying as glob pattern: ${path}`);
+      }
+      
+      try {
+        for await (const entry of expandGlob(path)) {
+          if (entry.isFile) {
+            if (verbose) {
+              console.log(`Found file from glob: ${entry.path}`);
+            }
+            allFiles.push(entry.path);
+          }
+        }
+      } catch (globError) {
+        console.error(`Error processing glob pattern ${path}:`, globError);
+      }
+    }
   }
+  
+  if (verbose) {
+    console.log(`Found ${allFiles.length} total files to process.`);
+  }
+  
+  if (allFiles.length === 0) {
+    throw new Error("No files found in the specified paths");
+  }
+  
   const results: string[] = [];
-  for (const file of files) {
+  for (const file of allFiles) {
     const isBin = await isBinaryFile(file);
     if (isBin) {
       if (verbose) {
@@ -178,11 +226,14 @@ export async function getFilesContent(basePath: string, verbose = false): Promis
       console.error(`Error reading file ${file}:`, err);
     }
   }
+  
   if (results.length === 0) {
     throw new Error("No readable files found");
   }
+  
   if (verbose) {
     console.log(`Total readable files: ${results.length}`);
   }
+  
   return results.join("\n");
 }
