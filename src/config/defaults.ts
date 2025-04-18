@@ -5,4 +5,5 @@ export const defaults = {
     "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
   stream: true,
   verbose: false,
+  provider: "google",  // Default provider is Google
 };

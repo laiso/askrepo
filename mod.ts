@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-net --allow-read --allow-env
 
 import * as fileUtils from "./src/file_utils.ts";
-import * as googleApi from "./src/google_api.ts";
+import { getAIResponse } from "./src/vercel_ai_sdk.ts";
 import { parseAndValidateArgs } from "./src/cli/parseAndValidateArgs.ts";
 
 export interface Args {
@@ -10,6 +10,7 @@ export interface Args {
   prompt: string;
   model: string;
   baseUrl: string;
+  provider: string;
   stream: boolean;
   verbose: boolean;
 }
@@ -34,7 +35,7 @@ Please answer the question by referencing the specific filenames and source code
 
 async function main() {
   // Parse and validate command-line arguments
-  const { basePaths, apiKey, prompt, model, baseUrl, stream, verbose } =
+  const { basePaths, apiKey, prompt, model, baseUrl, provider, stream, verbose } =
     parseAndValidateArgs();
 
   for (const path of basePaths) {
@@ -64,21 +65,12 @@ async function main() {
     { role: "user", content: finalPrompt },
   ];
 
-  // Call Google API and stream output
   try {
-    for await (
-      const text of googleApi.getGoogleApiData(
-        apiKey,
-        messages,
-        model,
-        stream,
-        baseUrl,
-      )
-    ) {
+    for await (const text of getAIResponse(apiKey, messages, model, stream, baseUrl)) {
       await Deno.stdout.write(new TextEncoder().encode(text));
     }
   } catch (e) {
-    console.error("Error fetching API data: ", e);
+    console.error("Error fetching AI API data: ", e);
   }
 }
 

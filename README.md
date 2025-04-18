@@ -16,9 +16,10 @@ Arguments:
 
 Options:
   -p, --prompt <TEXT>        Question to ask about the source code [default: "Explain the code in the files provided"]
-  -m, --model <TEXT>         Google AI model to use [default: "gemini-1.5-flash"]
-  -a, --api-key <TEXT>       Google API key
-  -u, --base-url <TEXT>      API endpoint URL [default: "https://generativelanguage.googleapis.com/v1beta/models/"]
+  -m, --model <TEXT>         AI model to use [default: "gemini-2.0-flash"]
+  -a, --api-key <TEXT>       API key
+  -u, --base-url <TEXT>      API endpoint URL [default: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"]
+  -r, --provider <TEXT>      AI provider to use (google, openai, anthropic, mistral) [default: "google"]
   --stream                   Enable/disable streaming mode [default: true]
   -v, --verbose              Enable verbose output
   -h, --help                 Show help
@@ -73,14 +74,32 @@ askrepo -p "What is the purpose of this code?" -m "gemini-2.0-flash" ../your-rep
 ```bash
 export OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
 askrepo --prompt "What is the purpose of this code?" \
-  --model "o3-mini" \
-  --base-url "https://api.openai.com/v1/chat/completions" \
+  --model "gpt-4o" \
+  --provider "openai" \
   ../your-repo/src
 
 # Using short options
 askrepo -p "What is the purpose of this code?" \
-  -m "o3-mini" \
-  -u "https://api.openai.com/v1/chat/completions" \
+  -m "gpt-4o" \
+  -r "openai" \
+  ../your-repo/src
+```
+
+### Using Anthropic API
+```bash
+export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
+askrepo --prompt "What is the purpose of this code?" \
+  --model "claude-3-sonnet" \
+  --provider "anthropic" \
+  ../your-repo/src
+```
+
+### Using Mistral API
+```bash
+export MISTRAL_API_KEY="YOUR_MISTRAL_API_KEY"
+askrepo --prompt "What is the purpose of this code?" \
+  --model "mistral-large" \
+  --provider "mistral" \
   ../your-repo/src
 ```
 
@@ -158,4 +177,8 @@ Files are identified as binary through two complementary methods:
 - Support for both streaming and non-streaming modes
 - Default to the latest Gemini model (gemini-2.0-flash), but can be configured
   to use other models
-- Support for OpenAI Compatible API
+- Support for multiple AI providers through Vercel AI SDK:
+  - Google Gemini
+  - OpenAI
+  - Anthropic Claude
+  - Mistral AI

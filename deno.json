@@ -10,6 +10,8 @@
   "imports": {
     "@cfa/gitignore-parser": "jsr:@cfa/gitignore-parser@^0.1.4",
     "@std/assert": "jsr:@std/assert@1",
-    "@std/cli": "jsr:@std/cli@^1.0.15"
+    "@std/cli": "jsr:@std/cli@^1.0.15",
+    "@std/path": "jsr:@std/path@1",
+    "ai": "npm:ai@^2.2.31"
   }
 }
