@@ -1,12 +1,17 @@
 import { ChatCompletionCreateParams } from "npm:openai/resources/index.js";
-import { 
-  GoogleGenerativeAI, 
-  OpenAI, 
-  AnthropicMessages, 
+import {
+  AnthropicMessages,
+  GoogleGenerativeAI,
   MistralClient,
-  StreamPart
+  OpenAI,
+  StreamPart,
 } from "npm:ai";
-import { PROVIDERS, ModelProvider, detectProviderFromModel, getApiKeyFromProvider } from "./config/models.ts";
+import {
+  detectProviderFromModel,
+  getApiKeyFromProvider,
+  ModelProvider,
+  PROVIDERS,
+} from "./config/models.ts";
 
 interface Message {
   role: string;
@@ -21,15 +26,15 @@ export async function* getAIResponse(
   messages: Message[],
   model: string,
   stream: boolean,
-  baseUrl?: string
+  baseUrl?: string,
 ): AsyncGenerator<string, void, unknown> {
   const provider = detectProviderFromModel(model);
   if (!provider) {
     throw new Error(`Unknown model: ${model}`);
   }
-  
+
   const actualApiKey = apiKey || getApiKeyFromProvider(provider);
-  
+
   try {
     switch (provider.name) {
       case PROVIDERS.GOOGLE.name:
@@ -61,24 +66,24 @@ async function* streamGoogleAI(
   messages: Message[],
   model: string,
   stream: boolean,
-  baseUrl?: string
+  baseUrl?: string,
 ): AsyncGenerator<string, void, unknown> {
   const googleAI = new GoogleGenerativeAI(apiKey, {
     baseURL: baseUrl || PROVIDERS.GOOGLE.baseUrl,
   });
-  
-  const googleMessages = messages.map(msg => ({
+
+  const googleMessages = messages.map((msg) => ({
     role: msg.role,
-    content: msg.content
+    content: msg.content,
   }));
-  
+
   if (stream) {
     const response = await googleAI.chat.completions.create({
       model,
       messages: googleMessages,
       stream: true,
     });
-    
+
     for await (const chunk of response) {
       if (chunk.choices[0]?.delta?.content) {
         yield chunk.choices[0].delta.content;
@@ -89,7 +94,7 @@ async function* streamGoogleAI(
       model,
       messages: googleMessages,
     });
-    
+
     if (response.choices[0]?.message?.content) {
       yield response.choices[0].message.content;
     }
@@ -104,25 +109,25 @@ async function* streamOpenAI(
   messages: Message[],
   model: string,
   stream: boolean,
-  baseUrl?: string
+  baseUrl?: string,
 ): AsyncGenerator<string, void, unknown> {
   const openai = new OpenAI({
     apiKey,
     baseURL: baseUrl || PROVIDERS.OPENAI.baseUrl,
   });
-  
-  const openaiMessages = messages.map(msg => ({
+
+  const openaiMessages = messages.map((msg) => ({
     role: msg.role as ChatCompletionCreateParams.Message["role"],
     content: msg.content,
   }));
-  
+
   if (stream) {
     const response = await openai.chat.completions.create({
       model,
       messages: openaiMessages,
       stream: true,
     });
-    
+
     for await (const chunk of response) {
       if (chunk.choices[0]?.delta?.content) {
         yield chunk.choices[0].delta.content;
@@ -133,7 +138,7 @@ async function* streamOpenAI(
       model,
       messages: openaiMessages,
     });
-    
+
     if (response.choices[0]?.message?.content) {
       yield response.choices[0].message.content;
     }
@@ -147,26 +152,26 @@ async function* streamAnthropic(
   apiKey: string,
   messages: Message[],
   model: string,
-  stream: boolean
+  stream: boolean,
 ): AsyncGenerator<string, void, unknown> {
   const anthropic = new AnthropicMessages({
     apiKey,
   });
-  
-  const anthropicMessages = messages.map(msg => ({
+
+  const anthropicMessages = messages.map((msg) => ({
     role: msg.role === "system" ? "assistant" : msg.role,
     content: msg.content,
   }));
-  
+
   if (stream) {
     const response = await anthropic.messages.create({
       model,
       messages: anthropicMessages,
       stream: true,
     });
-    
+
     for await (const chunk of response) {
-      if (chunk.type === 'content_block_delta' && chunk.delta?.text) {
+      if (chunk.type === "content_block_delta" && chunk.delta?.text) {
         yield chunk.delta.text;
       }
     }
@@ -175,7 +180,7 @@ async function* streamAnthropic(
       model,
       messages: anthropicMessages,
     });
-    
+
     if (response.content[0]?.text) {
       yield response.content[0].text;
     }
@@ -189,24 +194,24 @@ async function* streamMistral(
   apiKey: string,
   messages: Message[],
   model: string,
-  stream: boolean
+  stream: boolean,
 ): AsyncGenerator<string, void, unknown> {
   const mistral = new MistralClient({
     apiKey,
   });
-  
-  const mistralMessages = messages.map(msg => ({
+
+  const mistralMessages = messages.map((msg) => ({
     role: msg.role,
     content: msg.content,
   }));
-  
+
   if (stream) {
     const response = await mistral.chat.completions.create({
       model,
       messages: mistralMessages,
       stream: true,
     });
-    
+
     for await (const chunk of response) {
       if (chunk.choices[0]?.delta?.content) {
         yield chunk.choices[0].delta.content;
@@ -217,7 +222,7 @@ async function* streamMistral(
       model,
       messages: mistralMessages,
     });
-    
+
     if (response.choices[0]?.message?.content) {
       yield response.choices[0].message.content;
     }
