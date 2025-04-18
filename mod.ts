@@ -35,8 +35,16 @@ Please answer the question by referencing the specific filenames and source code
 
 async function main() {
   // Parse and validate command-line arguments
-  const { basePaths, apiKey, prompt, model, baseUrl, provider, stream, verbose } =
-    parseAndValidateArgs();
+  const {
+    basePaths,
+    apiKey,
+    prompt,
+    model,
+    baseUrl,
+    provider,
+    stream,
+    verbose,
+  } = parseAndValidateArgs();
 
   for (const path of basePaths) {
     try {
@@ -66,7 +74,9 @@ async function main() {
   ];
 
   try {
-    for await (const text of getAIResponse(apiKey, messages, model, stream, baseUrl)) {
+    for await (
+      const text of getAIResponse(apiKey, messages, model, stream, baseUrl)
+    ) {
       await Deno.stdout.write(new TextEncoder().encode(text));
     }
   } catch (e) {

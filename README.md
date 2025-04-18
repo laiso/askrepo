@@ -86,6 +86,7 @@ askrepo -p "What is the purpose of this code?" \
 ```
 
 ### Using Anthropic API
+
 ```bash
 export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
 askrepo --prompt "What is the purpose of this code?" \
@@ -95,6 +96,7 @@ askrepo --prompt "What is the purpose of this code?" \
 ```
 
 ### Using Mistral API
+
 ```bash
 export MISTRAL_API_KEY="YOUR_MISTRAL_API_KEY"
 askrepo --prompt "What is the purpose of this code?" \
