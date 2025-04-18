@@ -41,7 +41,7 @@ async function main() {
     prompt,
     model,
     baseUrl,
-    provider,
+    provider: _provider, // Unused but kept for future use
     stream,
     verbose,
   } = parseAndValidateArgs();

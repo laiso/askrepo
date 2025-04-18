@@ -1,15 +1,13 @@
-import { ChatCompletionCreateParams } from "npm:openai/resources/index.js";
+import type { ChatCompletionCreateParams } from "npm:openai/resources/index.js";
 import {
   AnthropicMessages,
   GoogleGenerativeAI,
   MistralClient,
   OpenAI,
-  StreamPart,
 } from "npm:ai";
 import {
   detectProviderFromModel,
   getApiKeyFromProvider,
-  ModelProvider,
   PROVIDERS,
 } from "./config/models.ts";
 
