@@ -3,22 +3,39 @@ import type { Args } from "../../mod.ts";
 import { defaults } from "../config/defaults.ts";
 
 /**
- * Parse and validate command-line arguments.
- * Returns an object containing the necessary parameters.
+ * 環境変数からAPIキーを取得する
+ * @returns APIキー
+ * @throws APIキーが設定されていない場合はエラー
+ */
+function getApiKeyFromEnv(): string {
+  const apiKey = Deno.env.get("GOOGLE_API_KEY");
+  if (!apiKey) {
+    throw new Error(
+      "Google API Key not found. Please set GOOGLE_API_KEY environment variable or provide --api_key option"
+    );
+  }
+  return apiKey;
+}
+
+/**
+ * コマンドライン引数を解析し、必要なパラメータを検証して返す
+ * @returns 検証済みの引数オブジェクト
+ * @throws 必須パラメータが不足している場合はエラー
  */
 export function parseAndValidateArgs(): Args {
+  // 引数を解析
   const args = parseArgs(Deno.args, {
     string: [
-      "base_path",
-      "model",
-      "api_key",
-      "prompt",
+      "base_path", 
+      "model", 
+      "api_key", 
+      "prompt", 
       "base_url",
-      "b",
-      "m",
-      "a",
-      "p",
-      "u",
+      "b", 
+      "m", 
+      "a", 
+      "p", 
+      "u"
     ],
     boolean: ["stream", "verbose", "s", "v"],
     alias: {
@@ -39,28 +56,36 @@ export function parseAndValidateArgs(): Args {
     },
   });
 
+  // ベースパスを決定
   let basePaths: string[] = [];
   if (args.base_path) {
+    // コマンドラインオプションとして指定された場合
     basePaths = Array.isArray(args.base_path)
       ? args.base_path
       : [args.base_path];
   } else if (args._.length > 0) {
-    basePaths = args._.map((arg) => String(arg)); // Convert all positional arguments to strings
+    // 位置引数として指定された場合
+    basePaths = args._.map((arg) => String(arg));
   } else {
-    basePaths = [Deno.cwd()]; // Default to current directory if no paths provided
+    // デフォルトは現在のディレクトリ
+    basePaths = [Deno.cwd()];
   }
 
-  const prompt: string = args.prompt || "";
+  // プロンプトの設定
+  const prompt = args.prompt || defaults.prompt;
 
-  let apiKey: string = args.api_key || "";
+  // APIキーの取得
+  let apiKey = args.api_key || "";
   if (!apiKey) {
-    apiKey = Deno.env.get("GOOGLE_API_KEY") || "";
-    if (!apiKey) {
-      console.error("GOOGLE_API_KEY environment variable not set");
+    try {
+      apiKey = getApiKeyFromEnv();
+    } catch (error: unknown) {
+      console.error(error instanceof Error ? error.message : String(error));
       Deno.exit(1);
     }
   }
 
+  // 検証済みの引数を返す
   return {
     basePaths,
     apiKey,
