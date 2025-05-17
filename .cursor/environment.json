@@ -1,0 +1,6 @@
+{
+  "snapshot": "snapshot-20250516-eb5a34c3-6b7a-48cd-b46e-8e734a15a317",
+  "install": "curl -fsSL https://deno.land/x/install/install.sh | sh && source ~/.bashrc",
+  "start": "deno test --allow-read --allow-write",
+  "terminals": []
+}
