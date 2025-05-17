@@ -18,7 +18,15 @@ const MAX_MAGIC_NUMBER_LENGTH = Math.max(
 );
 
 // Common binary file extensions
-const BINARY_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "bmp", "exe", "dll"]);
+const BINARY_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "bmp",
+  "exe",
+  "dll",
+]);
 
 /**
  * Determines if a file is binary based on its extension
@@ -46,7 +54,7 @@ export async function isBinaryFileByContent(file: string): Promise<boolean> {
       const data = buffer.subarray(0, bytesRead);
 
       // Check for NULL bytes
-      if (data.findIndex(byte => byte === 0) !== -1) {
+      if (data.findIndex((byte) => byte === 0) !== -1) {
         return true;
       }
 
@@ -143,13 +151,21 @@ export async function getTrackedFiles(
       if (verbose) {
         console.log(`Found Git repository root at ${dirPath}`);
       }
-      const matcher = await loadGitignoreFile(gitignorePath, gitignoreCache, verbose);
+      const matcher = await loadGitignoreFile(
+        gitignorePath,
+        gitignoreCache,
+        verbose,
+      );
       if (matcher.denies !== NO_OP_DENIES) {
         dirRules = [...dirRules, { path: gitignorePath, matcher }];
       }
     } catch (_e) {
       // Check for .gitignore even if not in a .git directory
-      const matcher = await loadGitignoreFile(gitignorePath, gitignoreCache, verbose);
+      const matcher = await loadGitignoreFile(
+        gitignorePath,
+        gitignoreCache,
+        verbose,
+      );
       if (matcher.denies !== NO_OP_DENIES) {
         dirRules = [...dirRules, { path: gitignorePath, matcher }];
       }

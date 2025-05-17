@@ -11,7 +11,7 @@ function getApiKeyFromEnv(): string {
   const apiKey = Deno.env.get("GOOGLE_API_KEY");
   if (!apiKey) {
     throw new Error(
-      "Google API Key not found. Please set GOOGLE_API_KEY environment variable or provide --api_key option"
+      "Google API Key not found. Please set GOOGLE_API_KEY environment variable or provide --api_key option",
     );
   }
   return apiKey;
@@ -26,16 +26,16 @@ export function parseAndValidateArgs(): Args {
   // Parse arguments
   const args = parseArgs(Deno.args, {
     string: [
-      "base_path", 
-      "model", 
-      "api_key", 
-      "prompt", 
+      "base_path",
+      "model",
+      "api_key",
+      "prompt",
       "base_url",
-      "b", 
-      "m", 
-      "a", 
-      "p", 
-      "u"
+      "b",
+      "m",
+      "a",
+      "p",
+      "u",
     ],
     boolean: ["stream", "verbose", "s", "v"],
     alias: {

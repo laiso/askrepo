@@ -44,7 +44,7 @@ async function validatePaths(paths: string[], verbose: boolean): Promise<void> {
     } catch (_e) {
       if (verbose) {
         console.log(
-          `Path not found directly: ${path}, will try as glob pattern`
+          `Path not found directly: ${path}, will try as glob pattern`,
         );
       }
     }
@@ -64,7 +64,7 @@ async function callApiAndOutputResults(
   messages: { role: string; content: string }[],
   model: string,
   stream: boolean,
-  baseUrl: string
+  baseUrl: string,
 ): Promise<void> {
   try {
     for await (
@@ -73,7 +73,7 @@ async function callApiAndOutputResults(
         messages,
         model,
         stream,
-        baseUrl
+        baseUrl,
       )
     ) {
       await Deno.stdout.write(new TextEncoder().encode(text));
@@ -92,7 +92,7 @@ async function callApiAndOutputResults(
  */
 async function getContentFromFiles(
   basePaths: string[],
-  verbose: boolean
+  verbose: boolean,
 ): Promise<string> {
   try {
     return await fileUtils.getFilesContent(basePaths, verbose);
@@ -113,7 +113,7 @@ async function main() {
 
     // Get file contents
     const filesContent = await getContentFromFiles(basePaths, verbose);
-    
+
     // Build prompt
     const finalPrompt = buildPrompt(filesContent, prompt);
     const messages = [

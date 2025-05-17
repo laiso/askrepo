@@ -81,9 +81,11 @@ export async function* getGoogleApiData(
 /**
  * Fetch data from Google API
  */
-async function fetchFromGoogleApi(options: GoogleApiOptions): Promise<Response> {
+async function fetchFromGoogleApi(
+  options: GoogleApiOptions,
+): Promise<Response> {
   const { apiKey, messages, model, stream, baseUrl } = options;
-  
+
   const body = {
     model,
     messages,
@@ -126,7 +128,7 @@ async function* processStreamResponse(
   if (!response.body) {
     throw new Error("No response body available");
   }
-  
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -135,11 +137,11 @@ async function* processStreamResponse(
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
+
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() || ""; // Save incomplete final line
-      
+
       for (const line of lines) {
         if (line.trim() !== "") {
           const content = processSingleLine(line.trim());
@@ -149,7 +151,7 @@ async function* processStreamResponse(
         }
       }
     }
-    
+
     // Process any remaining buffer
     if (buffer) {
       const content = processSingleLine(buffer.trim());
@@ -210,6 +212,6 @@ function extractContentFromJsonString(jsonStr: string): string {
     return "";
   } catch (error: unknown) {
     console.error("Error parsing JSON: ", error);
-    return "";  // Return empty string on error
+    return ""; // Return empty string on error
   }
 }
