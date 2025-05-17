@@ -26,9 +26,9 @@ interface GoogleApiOptions {
 }
 
 /**
- * Google APIからのレスポンスを処理して内容を取得する
- * @param data API応答データ
- * @returns 抽出されたコンテンツ
+ * Process Google API response to extract content
+ * @param data API response data
+ * @returns Extracted content
  */
 export function parseGoogleApiResponse(data: string): string {
   let result = "";
@@ -52,7 +52,7 @@ export function parseGoogleApiResponse(data: string): string {
 }
 
 /**
- * Google APIからデータを取得するジェネレーターメソッド
+ * Generator method to fetch data from Google API
  */
 export async function* getGoogleApiData(
   apiKey: string,
@@ -79,7 +79,7 @@ export async function* getGoogleApiData(
 }
 
 /**
- * Google APIからデータをフェッチ
+ * Fetch data from Google API
  */
 async function fetchFromGoogleApi(options: GoogleApiOptions): Promise<Response> {
   const { apiKey, messages, model, stream, baseUrl } = options;
@@ -118,7 +118,7 @@ async function fetchFromGoogleApi(options: GoogleApiOptions): Promise<Response> 
 }
 
 /**
- * ストリーミングレスポンスを処理
+ * Process streaming response
  */
 async function* processStreamResponse(
   response: Response,
@@ -138,7 +138,7 @@ async function* processStreamResponse(
       
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
-      buffer = lines.pop() || ""; // 不完全な最終行を保存
+      buffer = lines.pop() || ""; // Save incomplete final line
       
       for (const line of lines) {
         if (line.trim() !== "") {
@@ -150,7 +150,7 @@ async function* processStreamResponse(
       }
     }
     
-    // 最後に残ったバッファを処理
+    // Process any remaining buffer
     if (buffer) {
       const content = processSingleLine(buffer.trim());
       if (content !== "") yield content;
@@ -162,7 +162,7 @@ async function* processStreamResponse(
 }
 
 /**
- * 非ストリーミングレスポンスを処理
+ * Process non-streaming response
  */
 async function* processNonStreamResponse(
   response: Response,
@@ -180,7 +180,7 @@ async function* processNonStreamResponse(
 }
 
 /**
- * 単一行のストリームデータを処理
+ * Process a single line of stream data
  */
 function processSingleLine(line: string): string {
   if (line === "" || line === "data: [DONE]") {
@@ -194,7 +194,7 @@ function processSingleLine(line: string): string {
 }
 
 /**
- * JSON文字列からコンテンツを抽出
+ * Extract content from JSON string
  */
 function extractContentFromJsonString(jsonStr: string): string {
   try {
@@ -210,6 +210,6 @@ function extractContentFromJsonString(jsonStr: string): string {
     return "";
   } catch (error: unknown) {
     console.error("Error parsing JSON: ", error);
-    return "";  // エラーが出た場合は空文字列を返す
+    return "";  // Return empty string on error
   }
 }

@@ -5,7 +5,7 @@ import { expandGlob } from "jsr:@std/fs@1";
 const MAX_SCAN_SIZE = 1024;
 const NO_OP_DENIES = (_path: string) => false;
 
-// ファイルタイプ判定用の定数
+// Constants for file type detection
 const MAGIC_NUMBERS: Record<string, Uint8Array> = {
   JPEG: new Uint8Array([0xFF, 0xD8, 0xFF]),
   PNG: new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
@@ -17,11 +17,11 @@ const MAX_MAGIC_NUMBER_LENGTH = Math.max(
   ...Object.values(MAGIC_NUMBERS).map((arr) => arr.length),
 );
 
-// よく使われるバイナリ拡張子のリスト
+// Common binary file extensions
 const BINARY_EXTENSIONS = new Set(["jpg", "jpeg", "png", "gif", "bmp", "exe", "dll"]);
 
 /**
- * ファイル拡張子からバイナリファイルかどうか判定
+ * Determines if a file is binary based on its extension
  */
 export function isBinaryFileByExtension(file: string): boolean {
   const parts = file.split(".");
@@ -31,7 +31,7 @@ export function isBinaryFileByExtension(file: string): boolean {
 }
 
 /**
- * ファイルの内容からバイナリファイルかどうか判定
+ * Determines if a file is binary by examining its content
  */
 export async function isBinaryFileByContent(file: string): Promise<boolean> {
   try {
@@ -45,12 +45,12 @@ export async function isBinaryFileByContent(file: string): Promise<boolean> {
 
       const data = buffer.subarray(0, bytesRead);
 
-      // NULL バイトの検出
+      // Check for NULL bytes
       if (data.findIndex(byte => byte === 0) !== -1) {
         return true;
       }
 
-      // マジックナンバーチェック
+      // Check against magic numbers
       for (const magic of Object.values(MAGIC_NUMBERS)) {
         if (data.length < magic.length) continue;
 
@@ -75,14 +75,14 @@ export async function isBinaryFileByContent(file: string): Promise<boolean> {
 }
 
 /**
- * ファイルがバイナリかテキストか判定
+ * Determines if a file is binary
  */
 export async function isBinaryFile(file: string): Promise<boolean> {
   return isBinaryFileByExtension(file) || (await isBinaryFileByContent(file));
 }
 
 /**
- * gitignoreルールをロード
+ * Load gitignore rules
  */
 async function loadGitignoreFile(
   gitignorePath: string,
@@ -111,7 +111,7 @@ async function loadGitignoreFile(
 }
 
 /**
- * ディレクトリをトラバースして.gitignoreでフィルタリングしたファイル一覧を取得
+ * Traverse directory and get list of files filtered by .gitignore rules
  */
 export async function getTrackedFiles(
   basePath: string,
@@ -136,7 +136,7 @@ export async function getTrackedFiles(
     const gitignorePath = join(dirPath, ".gitignore");
     let dirRules = [...currentRules];
 
-    // Gitリポジトリのルートかどうかをチェック
+    // Check if this is a Git repository root
     try {
       const gitDirPath = join(dirPath, ".git");
       await Deno.stat(gitDirPath);
@@ -148,7 +148,7 @@ export async function getTrackedFiles(
         dirRules = [...dirRules, { path: gitignorePath, matcher }];
       }
     } catch (_e) {
-      // .gitディレクトリがなくてもgitignoreは確認
+      // Check for .gitignore even if not in a .git directory
       const matcher = await loadGitignoreFile(gitignorePath, gitignoreCache, verbose);
       if (matcher.denies !== NO_OP_DENIES) {
         dirRules = [...dirRules, { path: gitignorePath, matcher }];
@@ -159,13 +159,13 @@ export async function getTrackedFiles(
       for await (const entry of Deno.readDir(dirPath)) {
         const entryPath = join(dirPath, entry.name);
 
-        // 隠しファイル/ディレクトリはスキップ
+        // Skip hidden files/directories
         if (entry.name.startsWith(".")) continue;
 
         if (entry.isDirectory) {
           await traverseDirectory(entryPath, dirRules);
         } else if (entry.isFile) {
-          // gitignoreルールに基づいてファイルがフィルタされるかチェック
+          // Check if file is filtered by gitignore rules
           const isIgnored = dirRules.some(({ path, matcher }) => {
             if (matcher.denies(entryPath)) {
               if (verbose) {
@@ -194,7 +194,7 @@ export async function getTrackedFiles(
 }
 
 /**
- * 指定されたパス（複数可）からファイル内容を取得
+ * Get content from specified paths (multiple possible)
  */
 export async function getFilesContent(
   basePaths: string | string[],
@@ -203,7 +203,7 @@ export async function getFilesContent(
   const paths = Array.isArray(basePaths) ? basePaths : [basePaths];
   const allFiles: string[] = [];
 
-  // すべてのファイルパスを収集
+  // Collect all file paths
   for (const path of paths) {
     try {
       const fileInfo = await Deno.stat(path);
@@ -221,7 +221,7 @@ export async function getFilesContent(
         allFiles.push(...dirFiles);
       }
     } catch (_e) {
-      // パスが直接存在しない場合はグロブパターンとして試す
+      // Try as glob pattern if path doesn't exist directly
       if (verbose) {
         console.log(`Trying as glob pattern: ${path}`);
       }
@@ -249,11 +249,11 @@ export async function getFilesContent(
     throw new Error("No files found in the specified paths");
   }
 
-  // ファイル内容を読み込み
+  // Read file contents
   const results: string[] = [];
   for (const file of allFiles) {
     try {
-      // バイナリファイルはスキップ
+      // Skip binary files
       if (await isBinaryFile(file)) {
         if (verbose) {
           console.log(`Skipping binary file: ${file}`);

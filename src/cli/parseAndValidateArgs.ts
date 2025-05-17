@@ -3,9 +3,9 @@ import type { Args } from "../../mod.ts";
 import { defaults } from "../config/defaults.ts";
 
 /**
- * 環境変数からAPIキーを取得する
- * @returns APIキー
- * @throws APIキーが設定されていない場合はエラー
+ * Get API key from environment variable
+ * @returns API key
+ * @throws Error if API key is not set
  */
 function getApiKeyFromEnv(): string {
   const apiKey = Deno.env.get("GOOGLE_API_KEY");
@@ -18,12 +18,12 @@ function getApiKeyFromEnv(): string {
 }
 
 /**
- * コマンドライン引数を解析し、必要なパラメータを検証して返す
- * @returns 検証済みの引数オブジェクト
- * @throws 必須パラメータが不足している場合はエラー
+ * Parse and validate command-line arguments
+ * @returns Validated arguments object
+ * @throws Error if required parameters are missing
  */
 export function parseAndValidateArgs(): Args {
-  // 引数を解析
+  // Parse arguments
   const args = parseArgs(Deno.args, {
     string: [
       "base_path", 
@@ -56,25 +56,25 @@ export function parseAndValidateArgs(): Args {
     },
   });
 
-  // ベースパスを決定
+  // Determine base paths
   let basePaths: string[] = [];
   if (args.base_path) {
-    // コマンドラインオプションとして指定された場合
+    // Specified as command-line option
     basePaths = Array.isArray(args.base_path)
       ? args.base_path
       : [args.base_path];
   } else if (args._.length > 0) {
-    // 位置引数として指定された場合
+    // Specified as positional arguments
     basePaths = args._.map((arg) => String(arg));
   } else {
-    // デフォルトは現在のディレクトリ
+    // Default to current directory
     basePaths = [Deno.cwd()];
   }
 
-  // プロンプトの設定
+  // Set prompt
   const prompt = args.prompt || defaults.prompt;
 
-  // APIキーの取得
+  // Get API key
   let apiKey = args.api_key || "";
   if (!apiKey) {
     try {
@@ -85,7 +85,7 @@ export function parseAndValidateArgs(): Args {
     }
   }
 
-  // 検証済みの引数を返す
+  // Return validated arguments
   return {
     basePaths,
     apiKey,

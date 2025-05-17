@@ -15,10 +15,10 @@ export interface Args {
 }
 
 /**
- * プロンプト文字列を構築する
- * @param filesContent ファイルの集約された内容
- * @param prompt ユーザーが提供したプロンプト文字列
- * @returns 構築されたプロンプト文字列
+ * Build a prompt string from file contents and user prompt
+ * @param filesContent Aggregated content from files
+ * @param prompt User-provided prompt string
+ * @returns Constructed prompt string
  */
 function buildPrompt(filesContent: string, prompt: string): string {
   return `The following is information read from a list of source codes.
@@ -33,9 +33,9 @@ Please answer the question by referencing the specific filenames and source code
 }
 
 /**
- * 指定されたパスが有効かどうかを確認する
- * @param paths パスの配列
- * @param verbose 詳細ログ出力フラグ
+ * Validate if specified paths exist
+ * @param paths Array of paths
+ * @param verbose Verbose logging flag
  */
 async function validatePaths(paths: string[], verbose: boolean): Promise<void> {
   for (const path of paths) {
@@ -52,12 +52,12 @@ async function validatePaths(paths: string[], verbose: boolean): Promise<void> {
 }
 
 /**
- * APIにリクエストを送信し、結果を出力する
- * @param apiKey API キー
- * @param messages メッセージの配列
- * @param model モデル名
- * @param stream ストリーミングフラグ
- * @param baseUrl API の基本URL
+ * Send request to API and output results
+ * @param apiKey API key
+ * @param messages Array of messages
+ * @param model Model name
+ * @param stream Streaming flag
+ * @param baseUrl API base URL
  */
 async function callApiAndOutputResults(
   apiKey: string,
@@ -85,10 +85,10 @@ async function callApiAndOutputResults(
 }
 
 /**
- * ファイル内容を取得する
- * @param basePaths ファイルパスの配列
- * @param verbose 詳細ログ出力フラグ
- * @returns ファイル内容の文字列
+ * Get content from files
+ * @param basePaths Array of file paths
+ * @param verbose Verbose logging flag
+ * @returns File content string
  */
 async function getContentFromFiles(
   basePaths: string[],
@@ -104,23 +104,23 @@ async function getContentFromFiles(
 
 async function main() {
   try {
-    // 引数の解析と検証
+    // Parse and validate arguments
     const { basePaths, apiKey, prompt, model, baseUrl, stream, verbose } =
       parseAndValidateArgs();
 
-    // パスの検証
+    // Validate paths
     await validatePaths(basePaths, verbose);
 
-    // ファイル内容の取得
+    // Get file contents
     const filesContent = await getContentFromFiles(basePaths, verbose);
     
-    // プロンプトの構築
+    // Build prompt
     const finalPrompt = buildPrompt(filesContent, prompt);
     const messages = [
       { role: "user", content: finalPrompt },
     ];
 
-    // APIを呼び出して結果を出力
+    // Call API and output results
     await callApiAndOutputResults(apiKey, messages, model, stream, baseUrl);
   } catch (error: unknown) {
     console.error(error instanceof Error ? error.message : String(error));
