@@ -15,10 +15,10 @@ export interface Args {
 }
 
 /**
- * Build the prompt string using the files' content and instruction.
- * @param filesContent The aggregated content from the files.
- * @param prompt The prompt string provided by the user.
- * @returns The constructed prompt string.
+ * Build a prompt string from file contents and user prompt
+ * @param filesContent Aggregated content from files
+ * @param prompt User-provided prompt string
+ * @returns Constructed prompt string
  */
 function buildPrompt(filesContent: string, prompt: string): string {
   return `The following is information read from a list of source codes.
@@ -32,12 +32,13 @@ ${prompt}
 Please answer the question by referencing the specific filenames and source code from the files provided above.`;
 }
 
-async function main() {
-  // Parse and validate command-line arguments
-  const { basePaths, apiKey, prompt, model, baseUrl, stream, verbose } =
-    parseAndValidateArgs();
-
-  for (const path of basePaths) {
+/**
+ * Validate if specified paths exist
+ * @param paths Array of paths
+ * @param verbose Verbose logging flag
+ */
+async function validatePaths(paths: string[], verbose: boolean): Promise<void> {
+  for (const path of paths) {
     try {
       await Deno.stat(path);
     } catch (_e) {
@@ -48,23 +49,23 @@ async function main() {
       }
     }
   }
+}
 
-  // Retrieve file contents with verbose logging if enabled
-  let filesContent: string;
-  try {
-    filesContent = await fileUtils.getFilesContent(basePaths, verbose);
-  } catch (e) {
-    console.error(`Failed to get files content: ${e}`);
-    return;
-  }
-
-  // Build prompt
-  const finalPrompt = buildPrompt(filesContent, prompt);
-  const messages = [
-    { role: "user", content: finalPrompt },
-  ];
-
-  // Call Google API and stream output
+/**
+ * Send request to API and output results
+ * @param apiKey API key
+ * @param messages Array of messages
+ * @param model Model name
+ * @param stream Streaming flag
+ * @param baseUrl API base URL
+ */
+async function callApiAndOutputResults(
+  apiKey: string,
+  messages: { role: string; content: string }[],
+  model: string,
+  stream: boolean,
+  baseUrl: string,
+): Promise<void> {
   try {
     for await (
       const text of googleApi.getGoogleApiData(
@@ -77,8 +78,53 @@ async function main() {
     ) {
       await Deno.stdout.write(new TextEncoder().encode(text));
     }
-  } catch (e) {
-    console.error("Error fetching API data: ", e);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error fetching API data: ", errorMessage);
+  }
+}
+
+/**
+ * Get content from files
+ * @param basePaths Array of file paths
+ * @param verbose Verbose logging flag
+ * @returns File content string
+ */
+async function getContentFromFiles(
+  basePaths: string[],
+  verbose: boolean,
+): Promise<string> {
+  try {
+    return await fileUtils.getFilesContent(basePaths, verbose);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to get files content: ${errorMessage}`);
+  }
+}
+
+async function main() {
+  try {
+    // Parse and validate arguments
+    const { basePaths, apiKey, prompt, model, baseUrl, stream, verbose } =
+      parseAndValidateArgs();
+
+    // Validate paths
+    await validatePaths(basePaths, verbose);
+
+    // Get file contents
+    const filesContent = await getContentFromFiles(basePaths, verbose);
+
+    // Build prompt
+    const finalPrompt = buildPrompt(filesContent, prompt);
+    const messages = [
+      { role: "user", content: finalPrompt },
+    ];
+
+    // Call API and output results
+    await callApiAndOutputResults(apiKey, messages, model, stream, baseUrl);
+  } catch (error: unknown) {
+    console.error(error instanceof Error ? error.message : String(error));
+    Deno.exit(1);
   }
 }
 

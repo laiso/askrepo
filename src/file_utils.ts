@@ -5,25 +5,43 @@ import { expandGlob } from "jsr:@std/fs@1";
 const MAX_SCAN_SIZE = 1024;
 const NO_OP_DENIES = (_path: string) => false;
 
-const MAGIC_NUMBERS: Uint8Array[] = [
-  new Uint8Array([0xFF, 0xD8, 0xFF]), // JPEG
-  new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), // PNG
-  new TextEncoder().encode("GIF87a"), // GIF
-  new TextEncoder().encode("GIF89a"), // GIF
-];
+// Constants for file type detection
+const MAGIC_NUMBERS: Record<string, Uint8Array> = {
+  JPEG: new Uint8Array([0xFF, 0xD8, 0xFF]),
+  PNG: new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+  GIF87: new TextEncoder().encode("GIF87a"),
+  GIF89: new TextEncoder().encode("GIF89a"),
+  BMP: new Uint8Array([0x42, 0x4D]), // Added BMP magic number
+};
 
 const MAX_MAGIC_NUMBER_LENGTH = Math.max(
-  ...MAGIC_NUMBERS.map((arr) => arr.length),
+  ...Object.values(MAGIC_NUMBERS).map((arr) => arr.length),
 );
 
+// Common binary file extensions
+const BINARY_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "bmp",
+  "exe",
+  "dll",
+]);
+
+/**
+ * Determines if a file is binary based on its extension
+ */
 export function isBinaryFileByExtension(file: string): boolean {
-  const binaryExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "exe", "dll"];
   const parts = file.split(".");
   if (parts.length === 0) return false;
   const ext = parts[parts.length - 1].toLowerCase();
-  return binaryExtensions.includes(ext);
+  return BINARY_EXTENSIONS.has(ext);
 }
 
+/**
+ * Determines if a file is binary by examining its content
+ */
 export async function isBinaryFileByContent(file: string): Promise<boolean> {
   try {
     const file_obj = await Deno.open(file, { read: true });
@@ -36,11 +54,13 @@ export async function isBinaryFileByContent(file: string): Promise<boolean> {
 
       const data = buffer.subarray(0, bytesRead);
 
-      for (let i = 0; i < data.length && i < MAX_SCAN_SIZE; i++) {
-        if (data[i] === 0) return true;
+      // Check for NULL bytes
+      if (data.findIndex((byte) => byte === 0) !== -1) {
+        return true;
       }
 
-      for (const magic of MAGIC_NUMBERS) {
+      // Check against magic numbers
+      for (const magic of Object.values(MAGIC_NUMBERS)) {
         if (data.length < magic.length) continue;
 
         let match = true;
@@ -56,16 +76,52 @@ export async function isBinaryFileByContent(file: string): Promise<boolean> {
     } finally {
       file_obj.close();
     }
-  } catch (_e) {
-    console.error(`Error reading file for binary check ${file}:`, _e);
-    throw new Error(`Failed to check if file is binary`);
+  } catch (error: unknown) {
+    console.error(`Error reading file for binary check ${file}:`, error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to check if file is binary: ${errorMessage}`);
   }
 }
 
+/**
+ * Determines if a file is binary
+ */
 export async function isBinaryFile(file: string): Promise<boolean> {
   return isBinaryFileByExtension(file) || (await isBinaryFileByContent(file));
 }
 
+/**
+ * Load gitignore rules
+ */
+async function loadGitignoreFile(
+  gitignorePath: string,
+  gitignoreCache: Map<string, { denies: (path: string) => boolean }>,
+  verbose = false,
+): Promise<{ denies: (path: string) => boolean }> {
+  if (!gitignoreCache.has(gitignorePath)) {
+    try {
+      const gitignoreContent = await Deno.readTextFile(gitignorePath);
+      const matcher = compile(gitignoreContent);
+      gitignoreCache.set(gitignorePath, matcher);
+      if (verbose) {
+        console.log(`Loaded .gitignore from ${gitignorePath}`);
+      }
+      return matcher;
+    } catch (_e) {
+      if (verbose) {
+        console.log(`No .gitignore found at ${gitignorePath}`);
+      }
+      const noOpMatcher = { denies: NO_OP_DENIES };
+      gitignoreCache.set(gitignorePath, noOpMatcher);
+      return noOpMatcher;
+    }
+  }
+  return gitignoreCache.get(gitignorePath)!;
+}
+
+/**
+ * Traverse directory and get list of files filtered by .gitignore rules
+ */
 export async function getTrackedFiles(
   basePath: string,
   verbose = false,
@@ -80,38 +136,6 @@ export async function getTrackedFiles(
     { denies: (path: string) => boolean }
   >();
 
-  async function loadGitignoreFile(
-    gitignorePath: string,
-    dirRules: Array<
-      { path: string; matcher: { denies: (path: string) => boolean } }
-    >,
-  ): Promise<
-    Array<{ path: string; matcher: { denies: (path: string) => boolean } }>
-  > {
-    if (!gitignoreCache.has(gitignorePath)) {
-      try {
-        const gitignoreContent = await Deno.readTextFile(gitignorePath);
-        const matcher = compile(gitignoreContent);
-        gitignoreCache.set(gitignorePath, matcher);
-        dirRules.push({ path: gitignorePath, matcher });
-        if (verbose) {
-          console.log(`Loaded .gitignore from ${gitignorePath}`);
-        }
-      } catch (_e) {
-        if (verbose) {
-          console.log(`No .gitignore found at ${gitignorePath}`);
-        }
-        gitignoreCache.set(gitignorePath, { denies: NO_OP_DENIES });
-      }
-    } else if (gitignoreCache.get(gitignorePath)!.denies !== NO_OP_DENIES) {
-      dirRules.push({
-        path: gitignorePath,
-        matcher: gitignoreCache.get(gitignorePath)!,
-      });
-    }
-    return dirRules;
-  }
-
   async function traverseDirectory(
     dirPath: string,
     currentRules: Array<
@@ -121,38 +145,53 @@ export async function getTrackedFiles(
     const gitignorePath = join(dirPath, ".gitignore");
     let dirRules = [...currentRules];
 
+    // Check if this is a Git repository root
     try {
       const gitDirPath = join(dirPath, ".git");
-      const gitDirStat = await Deno.stat(gitDirPath);
-      if (gitDirStat.isDirectory) {
-        if (verbose) {
-          console.log(`Found Git repository root at ${dirPath}`);
-        }
-        dirRules = await loadGitignoreFile(gitignorePath, dirRules);
+      await Deno.stat(gitDirPath);
+      if (verbose) {
+        console.log(`Found Git repository root at ${dirPath}`);
+      }
+      const matcher = await loadGitignoreFile(
+        gitignorePath,
+        gitignoreCache,
+        verbose,
+      );
+      if (matcher.denies !== NO_OP_DENIES) {
+        dirRules = [...dirRules, { path: gitignorePath, matcher }];
       }
     } catch (_e) {
-      dirRules = await loadGitignoreFile(gitignorePath, dirRules);
+      // Check for .gitignore even if not in a .git directory
+      const matcher = await loadGitignoreFile(
+        gitignorePath,
+        gitignoreCache,
+        verbose,
+      );
+      if (matcher.denies !== NO_OP_DENIES) {
+        dirRules = [...dirRules, { path: gitignorePath, matcher }];
+      }
     }
 
     try {
       for await (const entry of Deno.readDir(dirPath)) {
         const entryPath = join(dirPath, entry.name);
 
+        // Skip hidden files/directories
         if (entry.name.startsWith(".")) continue;
 
         if (entry.isDirectory) {
           await traverseDirectory(entryPath, dirRules);
-        } else {
-          let isIgnored = false;
-          for (const { path, matcher } of dirRules) {
+        } else if (entry.isFile) {
+          // Check if file is filtered by gitignore rules
+          const isIgnored = dirRules.some(({ path, matcher }) => {
             if (matcher.denies(entryPath)) {
               if (verbose) {
                 console.log(`${entryPath} is ignored by ${path}`);
               }
-              isIgnored = true;
-              break;
+              return true;
             }
-          }
+            return false;
+          });
 
           if (!isIgnored) {
             if (verbose) {
@@ -162,8 +201,8 @@ export async function getTrackedFiles(
           }
         }
       }
-    } catch (e) {
-      console.error(`Error reading directory ${dirPath}:`, e);
+    } catch (error) {
+      console.error(`Error reading directory ${dirPath}:`, error);
     }
   }
 
@@ -171,6 +210,9 @@ export async function getTrackedFiles(
   return files;
 }
 
+/**
+ * Get content from specified paths (multiple possible)
+ */
 export async function getFilesContent(
   basePaths: string | string[],
   verbose = false,
@@ -178,6 +220,7 @@ export async function getFilesContent(
   const paths = Array.isArray(basePaths) ? basePaths : [basePaths];
   const allFiles: string[] = [];
 
+  // Collect all file paths
   for (const path of paths) {
     try {
       const fileInfo = await Deno.stat(path);
@@ -187,18 +230,15 @@ export async function getFilesContent(
           console.log(`Adding single file: ${path}`);
         }
         allFiles.push(path);
-        continue;
-      }
-
-      if (fileInfo.isDirectory) {
+      } else if (fileInfo.isDirectory) {
         if (verbose) {
           console.log(`Processing directory: ${path}`);
         }
         const dirFiles = await getTrackedFiles(path, verbose);
         allFiles.push(...dirFiles);
-        continue;
       }
     } catch (_e) {
+      // Try as glob pattern if path doesn't exist directly
       if (verbose) {
         console.log(`Trying as glob pattern: ${path}`);
       }
@@ -226,24 +266,26 @@ export async function getFilesContent(
     throw new Error("No files found in the specified paths");
   }
 
+  // Read file contents
   const results: string[] = [];
   for (const file of allFiles) {
-    const isBin = await isBinaryFile(file);
-    if (isBin) {
-      if (verbose) {
-        console.log(`Skipping binary file: ${file}`);
-      }
-      continue;
-    }
     try {
+      // Skip binary files
+      if (await isBinaryFile(file)) {
+        if (verbose) {
+          console.log(`Skipping binary file: ${file}`);
+        }
+        continue;
+      }
+
       if (verbose) {
         console.log(`Reading file: ${file}`);
       }
       const content = await Deno.readTextFile(file);
       const escapedContent = JSON.stringify(content);
       results.push(`${file}\t${escapedContent}`);
-    } catch (err) {
-      console.error(`Error reading file ${file}:`, err);
+    } catch (error) {
+      console.error(`Error reading file ${file}:`, error);
     }
   }
 

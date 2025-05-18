@@ -17,6 +17,43 @@ interface GoogleApiResponse {
   }>;
 }
 
+interface GoogleApiOptions {
+  apiKey: string;
+  messages: GoogleApiMessage[];
+  model: string;
+  stream: boolean;
+  baseUrl: string;
+}
+
+/**
+ * Process Google API response to extract content
+ * @param data API response data
+ * @returns Extracted content
+ */
+export function parseGoogleApiResponse(data: string): string {
+  let result = "";
+  const lines = data.split("\n");
+  for (let line of lines) {
+    line = line.trim();
+    if (line === "" || line === "data: [DONE]") {
+      continue;
+    }
+    if (line.startsWith("data: ")) {
+      const jsonStr = line.substring("data: ".length).trim();
+      const content = extractContentFromJsonString(jsonStr);
+      if (content !== "") {
+        result += content;
+      }
+    } else {
+      result += line;
+    }
+  }
+  return result;
+}
+
+/**
+ * Generator method to fetch data from Google API
+ */
 export async function* getGoogleApiData(
   apiKey: string,
   messages: GoogleApiMessage[],
@@ -24,6 +61,31 @@ export async function* getGoogleApiData(
   stream: boolean,
   baseUrl: string,
 ): AsyncGenerator<string, void, unknown> {
+  const options: GoogleApiOptions = {
+    apiKey,
+    messages,
+    model,
+    stream,
+    baseUrl,
+  };
+
+  const response = await fetchFromGoogleApi(options);
+
+  if (stream) {
+    yield* processStreamResponse(response);
+  } else {
+    yield* processNonStreamResponse(response);
+  }
+}
+
+/**
+ * Fetch data from Google API
+ */
+async function fetchFromGoogleApi(
+  options: GoogleApiOptions,
+): Promise<Response> {
+  const { apiKey, messages, model, stream, baseUrl } = options;
+
   const body = {
     model,
     messages,
@@ -54,20 +116,32 @@ export async function* getGoogleApiData(
     );
   }
 
-  if (stream) {
-    if (!response.body) {
-      throw new Error("No response body available");
-    }
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let partial = "";
+  return response;
+}
 
+/**
+ * Process streaming response
+ */
+async function* processStreamResponse(
+  response: Response,
+): AsyncGenerator<string, void, unknown> {
+  if (!response.body) {
+    throw new Error("No response body available");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      partial += decoder.decode(value, { stream: true });
-      const lines = partial.split("\n");
-      partial = lines.pop()!; // Save incomplete final line
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // Save incomplete final line
+
       for (const line of lines) {
         if (line.trim() !== "") {
           const content = processSingleLine(line.trim());
@@ -77,40 +151,39 @@ export async function* getGoogleApiData(
         }
       }
     }
-    if (partial) {
-      const content = processSingleLine(partial.trim());
+
+    // Process any remaining buffer
+    if (buffer) {
+      const content = processSingleLine(buffer.trim());
       if (content !== "") yield content;
     }
-  } else {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Error processing stream response: ${errorMessage}`);
+  }
+}
+
+/**
+ * Process non-streaming response
+ */
+async function* processNonStreamResponse(
+  response: Response,
+): AsyncGenerator<string, void, unknown> {
+  try {
     const json = await response.json();
     const message = json.choices?.[0]?.message || null;
     if (message && message.content) {
       yield message.content;
     }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Error processing non-stream response: ${errorMessage}`);
   }
 }
 
-export function parseGoogleApiResponse(data: string): string {
-  let result = "";
-  const lines = data.split("\n");
-  for (let line of lines) {
-    line = line.trim();
-    if (line === "" || line === "data: [DONE]") {
-      continue;
-    }
-    if (line.startsWith("data: ")) {
-      const jsonStr = line.substring("data: ".length).trim();
-      const content = extractContentFromJsonString(jsonStr);
-      if (content !== "") {
-        result += content;
-      }
-    } else {
-      result += line;
-    }
-  }
-  return result;
-}
-
+/**
+ * Process a single line of stream data
+ */
 function processSingleLine(line: string): string {
   if (line === "" || line === "data: [DONE]") {
     return "";
@@ -122,6 +195,9 @@ function processSingleLine(line: string): string {
   return line;
 }
 
+/**
+ * Extract content from JSON string
+ */
 function extractContentFromJsonString(jsonStr: string): string {
   try {
     const v: GoogleApiResponse = JSON.parse(jsonStr);
@@ -134,8 +210,8 @@ function extractContentFromJsonString(jsonStr: string): string {
       }
     }
     return "";
-  } catch (e) {
-    console.error("Error parsing JSON: ", e);
-    return jsonStr;
+  } catch (error: unknown) {
+    console.error("Error parsing JSON: ", error);
+    return ""; // Return empty string on error
   }
 }

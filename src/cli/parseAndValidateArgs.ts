@@ -3,10 +3,27 @@ import type { Args } from "../../mod.ts";
 import { defaults } from "../config/defaults.ts";
 
 /**
- * Parse and validate command-line arguments.
- * Returns an object containing the necessary parameters.
+ * Get API key from environment variable
+ * @returns API key
+ * @throws Error if API key is not set
+ */
+function getApiKeyFromEnv(): string {
+  const apiKey = Deno.env.get("GOOGLE_API_KEY");
+  if (!apiKey) {
+    throw new Error(
+      "Google API Key not found. Please set GOOGLE_API_KEY environment variable or provide --api_key option",
+    );
+  }
+  return apiKey;
+}
+
+/**
+ * Parse and validate command-line arguments
+ * @returns Validated arguments object
+ * @throws Error if required parameters are missing
  */
 export function parseAndValidateArgs(): Args {
+  // Parse arguments
   const args = parseArgs(Deno.args, {
     string: [
       "base_path",
@@ -39,28 +56,36 @@ export function parseAndValidateArgs(): Args {
     },
   });
 
+  // Determine base paths
   let basePaths: string[] = [];
   if (args.base_path) {
+    // Specified as command-line option
     basePaths = Array.isArray(args.base_path)
       ? args.base_path
       : [args.base_path];
   } else if (args._.length > 0) {
-    basePaths = args._.map((arg) => String(arg)); // Convert all positional arguments to strings
+    // Specified as positional arguments
+    basePaths = args._.map((arg) => String(arg));
   } else {
-    basePaths = [Deno.cwd()]; // Default to current directory if no paths provided
+    // Default to current directory
+    basePaths = [Deno.cwd()];
   }
 
-  const prompt: string = args.prompt || "";
+  // Set prompt
+  const prompt = args.prompt || defaults.prompt;
 
-  let apiKey: string = args.api_key || "";
+  // Get API key
+  let apiKey = args.api_key || "";
   if (!apiKey) {
-    apiKey = Deno.env.get("GOOGLE_API_KEY") || "";
-    if (!apiKey) {
-      console.error("GOOGLE_API_KEY environment variable not set");
+    try {
+      apiKey = getApiKeyFromEnv();
+    } catch (error: unknown) {
+      console.error(error instanceof Error ? error.message : String(error));
       Deno.exit(1);
     }
   }
 
+  // Return validated arguments
   return {
     basePaths,
     apiKey,
