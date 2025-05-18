@@ -11,6 +11,7 @@ const MAGIC_NUMBERS: Record<string, Uint8Array> = {
   PNG: new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
   GIF87: new TextEncoder().encode("GIF87a"),
   GIF89: new TextEncoder().encode("GIF89a"),
+  BMP: new Uint8Array([0x42, 0x4D]), // Added BMP magic number
 };
 
 const MAX_MAGIC_NUMBER_LENGTH = Math.max(
