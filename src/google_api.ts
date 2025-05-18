@@ -8,9 +8,13 @@ interface GoogleApiResponse {
   object: string;
   choices: Array<{
     index: number;
-    delta: {
+    delta?: {
       content?: string;
       refusal?: string | Record<string, unknown>;
+      role?: string;
+    };
+    message?: {
+      content?: string;
       role?: string;
     };
     finish_reason: string | null;
@@ -203,10 +207,16 @@ function extractContentFromJsonString(jsonStr: string): string {
     const v: GoogleApiResponse = JSON.parse(jsonStr);
     if (Array.isArray(v.choices) && v.choices.length > 0) {
       const choice = v.choices[0];
-      const delta = choice.delta;
       if (choice.finish_reason === "stop") return "";
+      
+      const delta = choice.delta;
       if (delta && typeof delta === "object" && delta.content) {
         return delta.content;
+      }
+      
+      const message = choice.message;
+      if (message && typeof message === "object" && message.content) {
+        return message.content;
       }
     }
     return "";
