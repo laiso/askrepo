@@ -1,8 +1,9 @@
-#!/usr/bin/env -S deno run --allow-net --allow-read --allow-env
+
 
 import * as fileUtils from "./src/file_utils.ts";
 import * as googleApi from "./src/google_api.ts";
 import { parseAndValidateArgs } from "./src/cli/parseAndValidateArgs.ts";
+import { initLogger } from "./src/logger.ts";
 
 export interface Args {
   basePaths: string[];
@@ -37,17 +38,12 @@ Please answer the question by referencing the specific filenames and source code
  * @param paths Array of paths
  * @param verbose Verbose logging flag
  */
-async function validatePaths(paths: string[], verbose: boolean): Promise<void> {
+import { log } from "./src/logger.ts";
+// Deno依存を外し、呼び出し元で処理する
+export async function validatePaths(paths: string[], verbose: boolean): Promise<void> {
   for (const path of paths) {
-    try {
-      await Deno.stat(path);
-    } catch (_e) {
-      if (verbose) {
-        console.log(
-          `Path not found directly: ${path}, will try as glob pattern`,
-        );
-      }
-    }
+    // ここでは存在チェックせず、必要なら呼び出し元でDeno APIを使う
+    log(`Validate path: ${path}`);
   }
 }
 
@@ -59,12 +55,13 @@ async function validatePaths(paths: string[], verbose: boolean): Promise<void> {
  * @param stream Streaming flag
  * @param baseUrl API base URL
  */
-async function callApiAndOutputResults(
+export async function callApiAndOutputResults(
   apiKey: string,
   messages: { role: string; content: string }[],
   model: string,
   stream: boolean,
   baseUrl: string,
+  onData: (text: string) => Promise<void> | void,
 ): Promise<void> {
   try {
     for await (
@@ -76,11 +73,11 @@ async function callApiAndOutputResults(
         baseUrl,
       )
     ) {
-      await Deno.stdout.write(new TextEncoder().encode(text));
+      await onData(text);
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Error fetching API data: ", errorMessage);
+    throw new Error("Error fetching API data: " + errorMessage);
   }
 }
 
@@ -90,7 +87,7 @@ async function callApiAndOutputResults(
  * @param verbose Verbose logging flag
  * @returns File content string
  */
-async function getContentFromFiles(
+export async function getContentFromFiles(
   basePaths: string[],
   verbose: boolean,
 ): Promise<string> {
@@ -102,32 +99,4 @@ async function getContentFromFiles(
   }
 }
 
-async function main() {
-  try {
-    // Parse and validate arguments
-    const { basePaths, apiKey, prompt, model, baseUrl, stream, verbose } =
-      parseAndValidateArgs();
-
-    // Validate paths
-    await validatePaths(basePaths, verbose);
-
-    // Get file contents
-    const filesContent = await getContentFromFiles(basePaths, verbose);
-
-    // Build prompt
-    const finalPrompt = buildPrompt(filesContent, prompt);
-    const messages = [
-      { role: "user", content: finalPrompt },
-    ];
-
-    // Call API and output results
-    await callApiAndOutputResults(apiKey, messages, model, stream, baseUrl);
-  } catch (error: unknown) {
-    console.error(error instanceof Error ? error.message : String(error));
-    Deno.exit(1);
-  }
-}
-
-if (import.meta.main) {
-  await main();
-}
+// CLI用のmainはsrc/main.tsに移動
