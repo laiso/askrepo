@@ -1,3 +1,4 @@
+import { log } from "./logger.ts";
 interface GoogleApiMessage {
   role: string;
   content: string;
@@ -92,6 +93,7 @@ async function fetchFromGoogleApi(
     stream,
   };
 
+  log("Sending request to Google API");
   const response = await fetch(baseUrl, {
     method: "POST",
     headers: {
@@ -102,6 +104,7 @@ async function fetchFromGoogleApi(
   });
 
   if (!response.ok) {
+    log(`Google API error: ${response.status} ${response.statusText}`);
     let errorDetails = "";
     try {
       const errorResponse = await response.json();
@@ -211,7 +214,7 @@ function extractContentFromJsonString(jsonStr: string): string {
     }
     return "";
   } catch (error: unknown) {
-    console.error("Error parsing JSON: ", error);
+    log("Error parsing JSON: ", error);
     return ""; // Return empty string on error
   }
 }
