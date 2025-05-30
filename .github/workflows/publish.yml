@@ -3,6 +3,10 @@ name: Publish to JSR
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "deno.json"
+      - "CHANGELOG.md"
 
 jobs:
   publish:
@@ -15,6 +19,8 @@ jobs:
     steps:
       - name: Clone repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Deno
         uses: denoland/setup-deno@v1
@@ -23,6 +29,23 @@ jobs:
 
       - name: Run tests
         run: deno test --allow-read --allow-write
+
+      - name: Update patch version
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(deno eval "console.log(JSON.parse(Deno.readTextFileSync('deno.json')).version)")
+          # Increment patch version
+          NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+          # Update deno.json
+          deno eval "const config = JSON.parse(Deno.readTextFileSync('deno.json')); config.version = '$NEW_VERSION'; Deno.writeTextFileSync('deno.json', JSON.stringify(config, null, 2) + '\n')"
+          # Add new version to CHANGELOG.md
+          echo -e "\n## [$NEW_VERSION] - $(date +%Y-%m-%d)\n\n- Patch version bump" >> CHANGELOG.md
+          # Commit changes
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add deno.json CHANGELOG.md
+          git commit -m "chore: bump version to $NEW_VERSION"
+          git push
 
       - name: Publish package
         run: deno publish
