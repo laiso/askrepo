@@ -1,6 +1,6 @@
 {
   "name": "@laiso/askrepo",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "MIT",
   "description": "Source code reading with LLM.",
   "exports": "./mod.ts",
